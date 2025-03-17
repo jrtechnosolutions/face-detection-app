@@ -11,4 +11,4 @@ scipy==1.11.3
 mtcnn==0.1.1
 retina-face==0.0.12
 requests==2.31.0
-dlib-binary==19.24.2
+dlib-binary==19.24.1
