@@ -1,0 +1,14 @@
+build_env:
+  cuda: "11.8"
+  python: "3.10"
+  system:
+    packages:
+      - "libgl1-mesa-glx"
+      - "libglib2.0-0"
+      - "libsm6"
+      - "libxrender1"
+      - "libxext6"
+      - "libx11-6"
+      - "libcairo2"
+      - "ffmpeg"
+      - "cmake" 
