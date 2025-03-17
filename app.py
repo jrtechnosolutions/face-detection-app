@@ -9,6 +9,10 @@ except ImportError:
     os.system("pip install streamlit>=1.31.0")
     import streamlit as st
 
+# Configura variables de entorno para TensorFlow
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Reducir mensajes de TensorFlow
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # Forzar CPU para evitar problemas con GPU en entornos cloud
+
 # Configura mensaje de error personalizado para dlib
 try:
     import dlib
@@ -17,61 +21,32 @@ except ImportError:
     DLIB_AVAILABLE = False
     print("Warning: dlib no está disponible. Algunas funciones pueden estar limitadas.")
 
+# Verificar TensorFlow y configurar ambiente
+try:
+    import tensorflow as tf
+    tf_version = tf.__version__
+    print(f"TensorFlow version: {tf_version}")
+except Exception as e:
+    print(f"Warning: TensorFlow initialization error: {e}")
+
+# Aplicar parches para DeepFace y RetinaFace
+try:
+    # Intenta importar y aplicar parches
+    import deepface_patch
+    deepface_patch.apply_patches()
+except Exception as e:
+    print(f"Warning: Failed to apply patches: {e}")
+
 # Asegurar que los archivos necesarios estén disponibles
 required_model_files = [
     "deploy.prototxt",
-    "res10_300x300_ssd_iter_140000_fp16.caffemodel"
+    "res10_300x300_ssd_iter_140000.caffemodel",
+    "shape_predictor_68_face_landmarks.dat"
 ]
 
 for model_file in required_model_files:
     if not os.path.exists(model_file):
-        model_dir = "models"
-        if not os.path.exists(model_dir):
-            os.makedirs(model_dir)
-        
-        if model_file == "deploy.prototxt":
-            # Crear el archivo deploy.prototxt manualmente
-            with open(os.path.join(model_dir, model_file), "w") as f:
-                f.write("""name: "deploy"
-input: "data"
-input_shape {
-  dim: 1
-  dim: 3
-  dim: 300
-  dim: 300
-}
-layer {
-  name: "conv1_1"
-  type: "Convolution"
-  bottom: "data"
-  top: "conv1_1"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 2
-    decay_mult: 0
-  }
-  convolution_param {
-    num_output: 64
-    kernel_size: 3
-    pad: 1
-    weight_filler {
-      type: "xavier"
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-# Continuar con el resto del modelo, pero simplificado por brevedad
-""")
-            print(f"Created {model_file}")
-        else:
-            # Para el caffemodel, informamos que se descargará automáticamente mediante DeepFace
-            print(f"Note: {model_file} will be downloaded automatically when needed")
+        print(f"Note: {model_file} will be downloaded automatically when needed")
 
 # Importa la aplicación principal
 from streamlit_app import main

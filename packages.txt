@@ -6,4 +6,7 @@ libxext6
 libx11-6
 libcairo2
 ffmpeg
-cmake 
+cmake
+libatk1.0-0
+libatk-bridge2.0-0
+libhdf5-dev 
