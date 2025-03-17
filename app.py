@@ -1,11 +1,14 @@
-# Simple app.py for Face Detection - compatible with TF 2.12.0
-import os
-import sys
+# Simple app.py for Face Detection
 import streamlit as st
 
-# Importar la aplicación principal
-print("Starting Face Detection Application...")
-from streamlit_app import main
-
-if __name__ == "__main__":
-    main() 
+try:
+    # Importar la aplicación principal
+    print("Starting Face Detection Application...")
+    from streamlit_app import main
+    
+    # Main entry point
+    if __name__ == "__main__":
+        main()
+except Exception as e:
+    st.error(f"Error al iniciar la aplicación: {e}")
+    st.error("Por favor, revise los logs para más información.") 
