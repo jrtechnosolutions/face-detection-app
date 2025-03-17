@@ -1,6 +1,21 @@
-import streamlit as st
 import os
 import sys
+
+# Intenta importar streamlit
+try:
+    import streamlit as st
+except ImportError:
+    print("Error: No se pudo importar streamlit. Instalando...")
+    os.system("pip install streamlit>=1.31.0")
+    import streamlit as st
+
+# Configura mensaje de error personalizado para dlib
+try:
+    import dlib
+    DLIB_AVAILABLE = True
+except ImportError:
+    DLIB_AVAILABLE = False
+    print("Warning: dlib no está disponible. Algunas funciones pueden estar limitadas.")
 
 # Asegurar que los archivos necesarios estén disponibles
 required_model_files = [
@@ -58,10 +73,13 @@ layer {
             # Para el caffemodel, informamos que se descargará automáticamente mediante DeepFace
             print(f"Note: {model_file} will be downloaded automatically when needed")
 
-# Importar la aplicación principal
-print("Starting Face Detection Application...")
-# Ejecutar la aplicación Streamlit
+# Importa la aplicación principal
 from streamlit_app import main
 
 if __name__ == "__main__":
+    # Imprime información del sistema para debugging
+    print(f"Python version: {sys.version}")
+    print(f"DLIB available: {DLIB_AVAILABLE}")
+    
+    # Ejecuta la aplicación principal
     main() 

@@ -4,9 +4,6 @@ libsm6
 libxrender1
 libxext6
 libx11-6
-libgtk-3-0
-libatk1.0-0
 libcairo2
 ffmpeg
-libavcodec-extra
 cmake 
