@@ -50,13 +50,13 @@ def main():
     # Function to load DNN models with caching and auto-download
     @st.cache_resource
     def load_face_model():
-        # Create models directory if it doesn't exist
-        if not os.path.exists('models'):
-            os.makedirs('models')
+        # No need to create directory as we're using the root directory
+        #
+            #
         
         # Correct model file names
-        modelFile = "models/res10_300x300_ssd_iter_140000.caffemodel"
-        configFile = "models/deploy.prototxt.txt"
+        modelFile = "res10_300x300_ssd_iter_140000.caffemodel"
+        configFile = "deploy.prototxt.txt"
         
         # Check if files exist
         missing_files = []
@@ -71,11 +71,11 @@ def main():
             st.code("""
             1. Download the model file:
                URL: https://raw.githubusercontent.com/sr6033/face-detection-with-OpenCV-and-DNN/master/res10_300x300_ssd_iter_140000.caffemodel
-               Save as: models/res10_300x300_ssd_iter_140000.caffemodel
+               Save as: res10_300x300_ssd_iter_140000.caffemodel
                
             2. Download the configuration file:
                URL: https://raw.githubusercontent.com/sr6033/face-detection-with-OpenCV-and-DNN/master/deploy.prototxt.txt
-               Save as: models/deploy.prototxt.txt
+               Save as: deploy.prototxt.txt
             """)
             st.stop()
         
@@ -2191,3 +2191,9 @@ def main():
 # Si se ejecuta este archivo directamente, llamar a la función main
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
