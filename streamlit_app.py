@@ -426,7 +426,7 @@ def main():
         return href
 
     # Function to process video frames
-    def process_video(video_path, face_net, eye_cascade, smile_cascade, conf_threshold=0.5, detect_eyes=False, detect_smile=False, bbox_color=(0, 255, 0), smile_sensitivity=15, eye_sensitivity=5):
+    def process_video(video_path, face_net, eye_cascade, smile_cascade, conf_threshold=0.5, detect_eyes=True, detect_smile=True, bbox_color=(0, 255, 0), smile_sensitivity=15, eye_sensitivity=5):
         cap = cv2.VideoCapture(video_path)
         
         # Get video properties
@@ -685,8 +685,8 @@ def main():
                                 eye_cascade,
                                 smile_cascade,
                                 conf_threshold,
-                                detect_eyes=False,
-                                detect_smile=False,
+                                detect_eyes=True,
+                                detect_smile=True,
                                 bbox_color=bbox_color_bgr,
                                 eye_sensitivity=5
                             )
@@ -940,8 +940,8 @@ def main():
                                 eye_cascade,
                                 smile_cascade,
                                 conf_threshold,
-                                detect_eyes=detect_eyes,
-                                detect_smile=detect_smile,
+                                detect_eyes=True,
+                                detect_smile=True,
                                 bbox_color=bbox_color_bgr,
                                 smile_sensitivity=smile_sensitivity,
                                 eye_sensitivity=eye_sensitivity
