@@ -752,7 +752,7 @@ def main():
                     cap = cv2.VideoCapture(0)  # 0 is typically the main webcam
                     
                     if not cap.isOpened():
-                        st.error("Could not access webcam. Make sure it's connected and not being used by another application.")
+                        st.error("Could not access webcam. Make sure it's connected and not being used by another application.")`r`n                        st.warning("?? Note: If you're using this app on Hugging Face Spaces, webcam access is not supported. Try running this app locally for webcam features.")
                         st.session_state.camera_running = False
                     else:
                         # Display real-time video with face detection
@@ -1007,7 +1007,7 @@ def main():
                     cap = cv2.VideoCapture(0)  # 0 is typically the main webcam
                     
                     if not cap.isOpened():
-                        st.error("Could not access webcam. Make sure it's connected and not being used by another application.")
+                        st.error("Could not access webcam. Make sure it's connected and not being used by another application.")`r`n                        st.warning("?? Note: If you're using this app on Hugging Face Spaces, webcam access is not supported. Try running this app locally for webcam features.")
                         st.session_state.feature_camera_running = False
                     else:
                         # Display real-time video with face and feature detection
@@ -2191,6 +2191,7 @@ def main():
 # Si se ejecuta este archivo directamente, llamar a la función main
 if __name__ == "__main__":
     main()
+
 
 
 
