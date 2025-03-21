@@ -1385,7 +1385,7 @@ def main():
                     
                     # Show detailed report in an expandable section
                     with st.expander("View Detailed Report"):
-                        st.text(report)
+                        st.write(report)
                     
                     # Provide option to download the report
                     st.download_button(
