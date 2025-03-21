@@ -20,6 +20,14 @@ try:
 except ImportError:
     DEEPFACE_AVAILABLE = False
 
+# Import functions for face comparison
+try:
+    from face_comparison import compare_faces, compare_faces_embeddings, generate_comparison_report_english, draw_face_matches
+    FACE_COMPARISON_AVAILABLE = True
+except ImportError:
+    FACE_COMPARISON_AVAILABLE = False
+    st.warning("Face comparison functions are not available. Please check your installation.")
+
 # Función principal que encapsula toda la aplicación
 def main():
     # Set page config with custom title and layout
