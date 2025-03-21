@@ -161,14 +161,12 @@ def generate_comparison_report_english(comparison_results, bboxes1, bboxes2, thr
     """
     Generate a text report of the face comparison results
     """
-    report = []
-    
     # Skip if no comparison results
     if not comparison_results:
-        return ["No face comparisons were performed."]
+        return "No face comparisons were performed."
     
     # Add header
-    report.append(f"Face Comparison Report:")
+    report = ["Face Comparison Report:"]
     
     # Add comparison results
     for i, face_comparisons in enumerate(comparison_results):
@@ -194,7 +192,8 @@ def generate_comparison_report_english(comparison_results, bboxes1, bboxes2, thr
         for j, comp in enumerate(face_comparisons):
             report.append(f"    Face {j+1}: Similarity {comp['similarity']:.2f}%")
     
-    return report
+    # Join the list into a single string with line breaks
+    return "\n".join(report)
 
 def draw_face_matches(image1, bboxes1, image2, bboxes2, comparison_results, threshold=50.0):
     """
