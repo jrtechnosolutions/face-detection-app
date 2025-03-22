@@ -2030,24 +2030,11 @@ def main():
                                             width=250  # Usar ancho fijo en lugar de use_column_width
                                         )
                                     else:
-                                        # Si no hay imagen de referencia, usar la imagen detectada
-                                        st.warning(f"Using detected face as reference for {reference_name}")
+                                        # No mostrar la misma imagen, solo un mensaje
+                                        st.info(f"No reference image available for {reference_name}. Please re-register this person.")
                                         
-                                        # Guardar la imagen detectada como referencia para este usuario
-                                        if reference_name in st.session_state.face_database:
-                                            st.session_state.face_database[reference_name]['face_image'] = match_info["face_crop"]
-                                            
-                                            # Guardar la base de datos actualizada
-                                            if DATABASE_UTILS_AVAILABLE:
-                                                save_success = save_face_database(st.session_state.face_database)
-                                                if save_success:
-                                                    st.success("Reference image saved for future use")
-                                            
-                                            # Mostrar la imagen detectada como referencia
-                                            st.image(
-                                                cv2.cvtColor(match_info["face_crop"], cv2.COLOR_BGR2RGB),
-                                                width=250
-                                            )
+                                        # Indicar al usuario que necesita volver a registrar para tener imagen de referencia
+                                        st.warning("Re-registration required to see proper comparison")
                         
                         # Limpiar el estado para la próxima ejecución
                         del st.session_state.matched_faces
