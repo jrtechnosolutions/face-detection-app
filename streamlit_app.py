@@ -2030,11 +2030,20 @@ def main():
                                             width=250  # Usar ancho fijo en lugar de use_column_width
                                         )
                                     else:
-                                        # No mostrar la misma imagen, solo un mensaje
-                                        st.info(f"No reference image available for {reference_name}. Please re-register this person.")
+                                        # Depuración para ver qué hay en la base de datos
+                                        st.error(f"Debug: Reference image not found for {reference_name}")
                                         
-                                        # Indicar al usuario que necesita volver a registrar para tener imagen de referencia
-                                        st.warning("Re-registration required to see proper comparison")
+                                        # Mostrar las claves disponibles para este usuario
+                                        if reference_name in st.session_state.face_database:
+                                            st.write("Available keys:", list(st.session_state.face_database[reference_name].keys()))
+                                            
+                                            # Si hay embeddings pero no imagen, mostrar mensaje informativo
+                                            if 'embeddings' in st.session_state.face_database[reference_name]:
+                                                st.info(f"User {reference_name} exists but has no reference image. Please re-register.")
+                                            else:
+                                                st.warning(f"User {reference_name} exists but has invalid data structure.")
+                                        else:
+                                            st.warning(f"User {reference_name} not found in database, but was matched?")
                         
                         # Limpiar el estado para la próxima ejecución
                         del st.session_state.matched_faces
