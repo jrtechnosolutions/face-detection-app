@@ -1469,167 +1469,98 @@ def main():
                 # Botón de registro
                 register_button = st.form_submit_button("Register Face")
             
-            if register_button and uploaded_file is not None and person_name:
-                # Process imagen
-                raw_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-                image = cv2.imdecode(raw_bytes, cv2.IMREAD_COLOR)
-                
-                # Detect rostros
-                face_net = load_face_model()
-                detections = detect_face_dnn(face_net, image, conf_threshold=confidence_threshold)
-                
-                # Procesar detecciones y obtener bounding boxes
-                processed_image, bboxes = process_face_detections(image, detections, confidence_threshold)
-                
-                if not bboxes:
-                    st.error("No faces detected in the image. Please upload another image.")
-                elif len(bboxes) > 1:
-                    st.warning("Multiple faces detected. The first one will be used.")
-                    
-                    # Extraer embeddings del primer rostro
-                    if bboxes and len(bboxes) > 0 and len(bboxes[0]) == 5:
-                        embeddings_all_models = extract_face_embeddings_all_models(image, bboxes[0])
-                    
-                        if embeddings_all_models:
-                            # Guardar en la base de datos
-                            if add_to_existing and person_name in st.session_state.face_database:
-                                # Añadir a persona existente
-                                if 'embeddings' in st.session_state.face_database[person_name]:
-                                    # Formato nuevo con múltiples embeddings
-                                    for embedding in embeddings_all_models:
-                                        model_name = embedding['model']
-                                        model_idx = -1
-                                        
-                                        # Buscar si ya existe un embedding de este modelo
-                                        for i, model in enumerate(st.session_state.face_database[person_name]['models']):
-                                            if model == model_name:
-                                                model_idx = i
-                                                break
-                                        
-                                        if model_idx >= 0:
-                                            # Actualizar embedding existente
-                                            st.session_state.face_database[person_name]['embeddings'][model_idx] = embedding['embedding']
-                                        else:
-                                            # Añadir nuevo modelo
-                                            st.session_state.face_database[person_name]['models'].append(model_name)
-                                            st.session_state.face_database[person_name]['embeddings'].append(embedding['embedding'])
-                                
-                                # Incrementar contador
-                                st.session_state.face_database[person_name]['count'] += 1
-                            else:
-                                # Formato antiguo, convertir a nuevo formato
-                                old_embedding = st.session_state.face_database[person_name]['embedding']
-                                old_model = 'VGG-Face'  # Modelo por defecto para embeddings antiguos
-                                
-                                # Crear nuevo formato
-                                st.session_state.face_database[person_name] = {
-                                    'embeddings': [old_embedding],
-                                    'models': [old_model],
-                                    'count': 1
-                                }
-                                
-                                # Añadir nuevos embeddings
-                                for embedding in embeddings_all_models:
-                                    model_name = embedding['model']
-                                    if model_name != old_model:  # Evitar duplicados
-                                        st.session_state.face_database[person_name]['models'].append(model_name)
-                                        st.session_state.face_database[person_name]['embeddings'].append(embedding['embedding'])
-                                
-                                # Incrementar contador
-                                st.session_state.face_database[person_name]['count'] += 1
-                        else:
-                            # Crear nueva entrada
-                            models = []
-                            embeddings = []
-                            
-                            for embedding in embeddings_all_models:
-                                models.append(embedding['model'])
-                                embeddings.append(embedding['embedding'])
-                            
-                            st.session_state.face_database[person_name] = {
-                                'embeddings': embeddings,
-                                'models': models,
-                                'count': 1
-                            }
-                        
-                        st.success(f"Face registered successfully for {person_name}!")
-                        
-                        # Mostrar la imagen con el rostro detectado
-                        processed_image, _ = process_face_detections(image, [bboxes[0]], confidence_threshold)
-                        st.image(cv2.cvtColor(processed_image, cv2.COLOR_BGR2RGB), caption=f"Registered face: {person_name}")
-                    else:
-                        st.error("Failed to extract embeddings. Please try again with a clearer image.")
+            if register_button:
+                # Validar que se haya proporcionado un nombre
+                if not person_name:
+                    st.error("Person's name is required. Please enter a name.")
+                elif uploaded_file is None:
+                    st.error("Please upload an image.")
                 else:
-                    # Solo un rostro detectado
-                    embeddings_all_models = extract_face_embeddings_all_models(image, bboxes[0])
-                    
-                    if embeddings_all_models:
-                        # Guardar en la base de datos
-                        if add_to_existing and person_name in st.session_state.face_database:
-                            # Añadir a persona existente
-                            if 'embeddings' in st.session_state.face_database[person_name]:
-                                # Formato nuevo con múltiples embeddings
-                                for embedding in embeddings_all_models:
-                                    model_name = embedding['model']
-                                    model_idx = -1
+                    # Mostrar spinner durante el procesamiento
+                    with st.spinner('Processing image and extracting facial features...'):
+                        # Process imagen
+                        raw_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+                        image = cv2.imdecode(raw_bytes, cv2.IMREAD_COLOR)
+                        
+                        # Detect rostros
+                        face_net = load_face_model()
+                        detections = detect_face_dnn(face_net, image, conf_threshold=confidence_threshold)
+                        
+                        # Procesar detecciones y obtener bounding boxes
+                        processed_image, bboxes = process_face_detections(image, detections, confidence_threshold)
+                        
+                        if not bboxes:
+                            st.error("No faces detected in the image. Please upload another image.")
+                        elif len(bboxes) > 1:
+                            st.warning("Multiple faces detected. The first one will be used.")
+                            
+                            # Extraer embeddings del primer rostro
+                            if bboxes and len(bboxes) > 0 and len(bboxes[0]) == 5:
+                                embeddings_all_models = extract_face_embeddings_all_models(image, bboxes[0])
+                            
+                                if embeddings_all_models:
+                                    # Guardar en la base de datos
+                                    if add_to_existing and person_name in st.session_state.face_database:
+                                        # Añadir a persona existente
+                                        if 'embeddings' in st.session_state.face_database[person_name]:
+                                            # Formato nuevo con múltiples embeddings
+                                            for embedding in embeddings_all_models:
+                                                model_name = embedding['model']
+                                                model_idx = -1
+                                                
+                                                # Buscar si ya existe un embedding de este modelo
+                                                for i, model in enumerate(st.session_state.face_database[person_name]['models']):
+                                                    if model == model_name:
+                                                        model_idx = i
+                                                        break
+                                                
+                                                if model_idx >= 0:
+                                                    # Actualizar embedding existente
+                                                    st.session_state.face_database[person_name]['embeddings'][model_idx] = embedding['embedding']
+                                                else:
+                                                    # Añadir nuevo modelo
+                                                    st.session_state.face_database[person_name]['models'].append(model_name)
+                                                    st.session_state.face_database[person_name]['embeddings'].append(embedding['embedding'])
                                     
-                                    # Buscar si ya existe un embedding de este modelo
-                                    for i, model in enumerate(st.session_state.face_database[person_name]['models']):
-                                        if model == model_name:
-                                            model_idx = i
-                                            break
-                                    
-                                    if model_idx >= 0:
-                                        # Actualizar embedding existente
-                                        st.session_state.face_database[person_name]['embeddings'][model_idx] = embedding['embedding']
-                                    else:
-                                        # Añadir nuevo modelo
-                                        st.session_state.face_database[person_name]['models'].append(model_name)
-                                        st.session_state.face_database[person_name]['embeddings'].append(embedding['embedding'])
-                                
-                                # Incrementar contador
-                                st.session_state.face_database[person_name]['count'] += 1
-                            else:
-                                # Formato antiguo, convertir a nuevo formato
-                                old_embedding = st.session_state.face_database[person_name]['embedding']
-                                old_model = 'VGG-Face'  # Modelo por defecto para embeddings antiguos
-                                
-                                # Crear nuevo formato
-                                st.session_state.face_database[person_name] = {
-                                    'embeddings': [old_embedding],
-                                    'models': [old_model],
-                                    'count': 1
-                                }
-                                
-                                # Añadir nuevos embeddings
-                                for embedding in embeddings_all_models:
-                                    model_name = embedding['model']
-                                    if model_name != old_model:  # Evitar duplicados
-                                        st.session_state.face_database[person_name]['models'].append(model_name)
-                                        st.session_state.face_database[person_name]['embeddings'].append(embedding['embedding'])
-                                
-                                # Incrementar contador
-                                st.session_state.face_database[person_name]['count'] += 1
+                                    # Incrementar contador
+                                    st.session_state.face_database[person_name]['count'] += 1
+                                else:
+                                    st.error("Failed to extract embeddings. Please try again with a clearer image.")
                         else:
-                            # Crear nueva entrada
-                            models = []
-                            embeddings = []
+                            # Solo un rostro detectado
+                            embeddings_all_models = extract_face_embeddings_all_models(image, bboxes[0])
                             
-                            for embedding in embeddings_all_models:
-                                models.append(embedding['model'])
-                                embeddings.append(embedding['embedding'])
-                            
-                            st.session_state.face_database[person_name] = {
-                                'embeddings': embeddings,
-                                'models': models,
-                                'count': 1
-                            }
-                        
-                        st.success(f"Face registered successfully for {person_name}!")
-                        
-                        # Mostrar la imagen con el rostro detectado
-                        processed_image, _ = process_face_detections(image, [bboxes[0]], confidence_threshold)
-                        st.image(cv2.cvtColor(processed_image, cv2.COLOR_BGR2RGB), caption=f"Registered face: {person_name}")
+                            if embeddings_all_models:
+                                # Guardar en la base de datos
+                                if add_to_existing and person_name in st.session_state.face_database:
+                                    # Añadir a persona existente
+                                    if 'embeddings' in st.session_state.face_database[person_name]:
+                                        # Formato nuevo con múltiples embeddings
+                                        for embedding in embeddings_all_models:
+                                            model_name = embedding['model']
+                                            model_idx = -1
+                                            
+                                            # Buscar si ya existe un embedding de este modelo
+                                            for i, model in enumerate(st.session_state.face_database[person_name]['models']):
+                                                if model == model_name:
+                                                    model_idx = i
+                                                    break
+                                            
+                                            if model_idx >= 0:
+                                                # Actualizar embedding existente
+                                                st.session_state.face_database[person_name]['embeddings'][model_idx] = embedding['embedding']
+                                            else:
+                                                # Añadir nuevo modelo
+                                                st.session_state.face_database[person_name]['models'].append(model_name)
+                                                st.session_state.face_database[person_name]['embeddings'].append(embedding['embedding'])
+                                
+                                st.success(f"Face registered successfully for {person_name}!")
+                                
+                                # Mostrar la imagen con el rostro detectado
+                                processed_image, _ = process_face_detections(image, [bboxes[0]], confidence_threshold)
+                                st.image(cv2.cvtColor(processed_image, cv2.COLOR_BGR2RGB), caption=f"Registered face: {person_name}")
+                            else:
+                                st.error("Failed to extract embeddings. Please try again with a clearer image.")
                     else:
                         st.error("Failed to extract embeddings. Please try again with a clearer image.")
             
@@ -1756,145 +1687,147 @@ def main():
                     )
                 
                 if uploaded_file is not None:
-                    # Process la imagen subida
-                    raw_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-                    image = cv2.imdecode(raw_bytes, cv2.IMREAD_COLOR)
-                    
-                    # Detect rostros
-                    detections = detect_face_dnn(face_net, image, confidence_threshold)
-                    processed_image, bboxes = process_face_detections(image, detections, confidence_threshold)
-                    
-                    if not bboxes:
-                        st.error("No se detectaron rostros en la imagen.")
-                    else:
-                        # Mostrar imagen con rostros detectados
-                        st.image(processed_image, channels='BGR', caption="Faces detected")
+                    # Mostrar spinner durante el procesamiento
+                    with st.spinner('Processing image and analyzing faces...'):
+                        # Process la imagen subida
+                        raw_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+                        image = cv2.imdecode(raw_bytes, cv2.IMREAD_COLOR)
                         
-                        # Reconocer cada rostro
-                        result_image = image.copy()
+                        # Detect rostros
+                        detections = detect_face_dnn(face_net, image, confidence_threshold)
+                        processed_image, bboxes = process_face_detections(image, detections, confidence_threshold)
                         
-                        # Crear columnas para mostrar estadísticas
-                        stats_cols = st.columns(len(bboxes) if len(bboxes) <= 3 else 3)
-                        
-                        for i, bbox in enumerate(bboxes):
-                            # Extraer embedding del rostro
-                            embedding = extract_face_embeddings(image, bbox, model_name=model_choice)
+                        if not bboxes:
+                            st.error("No se detectaron rostros en la imagen.")
+                        else:
+                            # Mostrar imagen con rostros detectados
+                            st.image(processed_image, channels='BGR', caption="Faces detected")
                             
-                            if embedding is not None:
-                                # Compare con rostros registrados
-                                matches = []
+                            # Reconocer cada rostro
+                            result_image = image.copy()
+                            
+                            # Crear columnas para mostrar estadísticas
+                            stats_cols = st.columns(len(bboxes) if len(bboxes) <= 3 else 3)
+                            
+                            for i, bbox in enumerate(bboxes):
+                                # Extraer embedding del rostro
+                                embedding = extract_face_embeddings(image, bbox, model_name=model_choice)
                                 
-                                for name, info in st.session_state.face_database.items():
-                                    if 'embeddings' in info:
-                                        # Nuevo formato con múltiples embeddings
-                                        similarities = []
-                                        
-                                        for idx, registered_embedding in enumerate(info['embeddings']):
-                                            # Usar el mismo modelo si es posible
-                                            if info['models'][idx] == model_choice:
-                                                weight = 1.0  # Dar más peso a embeddings del mismo modelo
-                                            else:
-                                                weight = 0.8  # Peso menor para embeddings de otros modelos
-                                                
-                                            # Asegurarse de que los embeddings sean compatibles
+                                if embedding is not None:
+                                    # Compare con rostros registrados
+                                    matches = []
+                                    
+                                    for name, info in st.session_state.face_database.items():
+                                        if 'embeddings' in info:
+                                            # Nuevo formato con múltiples embeddings
+                                            similarities = []
+                                            
+                                            for idx, registered_embedding in enumerate(info['embeddings']):
+                                                # Usar el mismo modelo si es posible
+                                                if info['models'][idx] == model_choice:
+                                                    weight = 1.0  # Dar más peso a embeddings del mismo modelo
+                                                else:
+                                                    weight = 0.8  # Peso menor para embeddings de otros modelos
+                                                    
+                                                # Asegurarse de que los embeddings sean compatibles
+                                                try:
+                                                    similarity = cosine_similarity([embedding["embedding"]], [registered_embedding])[0][0] * 100 * weight
+                                                    similarities.append(similarity)
+                                                except ValueError as e:
+                                                    # Si hay error de dimensiones incompatibles, omitir esta comparación
+                                                    # Modelos incompatibles: {info['models'][idx]} vs {embedding['model']}
+                                                    continue
+                                            
+                                            # Aplicar método de votación seleccionado
+                                            if voting_method == "Promedio":
+                                                if similarities:  # Verificar que la lista no esté vacía
+                                                    final_similarity = sum(similarities) / len(similarities)
+                                                else:
+                                                    final_similarity = 0.0  # Valor predeterminado si no hay similitudes
+                                            elif voting_method == "Mejor coincidencia":
+                                                if similarities:  # Verificar que la lista no esté vacía
+                                                    final_similarity = max(similarities)
+                                                else:
+                                                    final_similarity = 0.0  # Valor predeterminado si no hay similitudes
+                                            else:  # Votación ponderada
+                                                if similarities:  # Verificar que la lista no esté vacía
+                                                    # Dar más peso a similitudes más altas
+                                                    weighted_sum = sum(s * (i+1) for i, s in enumerate(sorted(similarities)))
+                                                    weights_sum = sum(i+1 for i in range(len(similarities)))
+                                                    final_similarity = weighted_sum / weights_sum
+                                                else:
+                                                    final_similarity = 0.0  # Valor predeterminado si no hay similitudes
+                                            
+                                            matches.append({"name": name, "similarity": final_similarity, "count": info['count']})
+                                        else:
+                                            # Formato antiguo con un solo embedding
+                                            registered_embedding = info['embedding']
                                             try:
-                                                similarity = cosine_similarity([embedding["embedding"]], [registered_embedding])[0][0] * 100 * weight
-                                                similarities.append(similarity)
+                                                similarity = cosine_similarity([embedding["embedding"]], [registered_embedding])[0][0] * 100
+                                                matches.append({"name": name, "similarity": similarity, "count": 1})
                                             except ValueError as e:
                                                 # Si hay error de dimensiones incompatibles, omitir esta comparación
-                                                # Modelos incompatibles: {info['models'][idx]} vs {embedding['model']}
+                                                # Modelos incompatibles: {embedding['model']} vs formato antiguo
                                                 continue
-                                        
-                                        # Aplicar método de votación seleccionado
-                                        if voting_method == "Promedio":
-                                            if similarities:  # Verificar que la lista no esté vacía
-                                                final_similarity = sum(similarities) / len(similarities)
-                                            else:
-                                                final_similarity = 0.0  # Valor predeterminado si no hay similitudes
-                                        elif voting_method == "Mejor coincidencia":
-                                            if similarities:  # Verificar que la lista no esté vacía
-                                                final_similarity = max(similarities)
-                                            else:
-                                                final_similarity = 0.0  # Valor predeterminado si no hay similitudes
-                                        else:  # Votación ponderada
-                                            if similarities:  # Verificar que la lista no esté vacía
-                                                # Dar más peso a similitudes más altas
-                                                weighted_sum = sum(s * (i+1) for i, s in enumerate(sorted(similarities)))
-                                                weights_sum = sum(i+1 for i in range(len(similarities)))
-                                                final_similarity = weighted_sum / weights_sum
-                                            else:
-                                                final_similarity = 0.0  # Valor predeterminado si no hay similitudes
-                                        
-                                        matches.append({"name": name, "similarity": final_similarity, "count": info['count']})
+                                
+                                # Ordenar coincidencias por similitud
+                                matches.sort(key=lambda x: x["similarity"], reverse=True)
+                                
+                                # Dibujar resultado en la imagen
+                                x1, y1, x2, y2, _ = bbox
+                                
+                                if matches and matches[0]["similarity"] >= similarity_threshold:
+                                    # Coincidencia encontrada
+                                    best_match = matches[0]
+                                    
+                                    # Color basado en nivel de similitud
+                                    if best_match["similarity"] >= 80:
+                                        color = (0, 255, 0)  # Verde para alta similitud
+                                    elif best_match["similarity"] >= 65:
+                                        color = (0, 255, 255)  # Amarillo para media similitud
                                     else:
-                                        # Formato antiguo con un solo embedding
-                                        registered_embedding = info['embedding']
-                                        try:
-                                            similarity = cosine_similarity([embedding["embedding"]], [registered_embedding])[0][0] * 100
-                                            matches.append({"name": name, "similarity": similarity, "count": 1})
-                                        except ValueError as e:
-                                            # Si hay error de dimensiones incompatibles, omitir esta comparación
-                                            # Modelos incompatibles: {embedding['model']} vs formato antiguo
-                                            continue
-                            
-                            # Ordenar coincidencias por similitud
-                            matches.sort(key=lambda x: x["similarity"], reverse=True)
-                            
-                            # Dibujar resultado en la imagen
-                            x1, y1, x2, y2, _ = bbox
-                            
-                            if matches and matches[0]["similarity"] >= similarity_threshold:
-                                # Coincidencia encontrada
-                                best_match = matches[0]
-                                
-                                # Color basado en nivel de similitud
-                                if best_match["similarity"] >= 80:
-                                    color = (0, 255, 0)  # Verde para alta similitud
-                                elif best_match["similarity"] >= 65:
-                                    color = (0, 255, 255)  # Amarillo para media similitud
-                                else:
-                                    color = (0, 165, 255)  # Naranja para baja similitud
-                                
-                                # Dibujar rectángulo y etiqueta principal
-                                label = f"{best_match['name']}: {best_match['similarity']:.1f}%"
-                                cv2.rectangle(result_image, (x1, y1), (x2, y2), color, 2)
-                                cv2.putText(result_image, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
-                                
-                                # Mostrar coincidencias adicionales si está activado
-                                if show_all_matches and len(matches) > 1:
-                                    for j, match in enumerate(matches[1:3]):  # Mostrar las siguientes 2 mejores coincidencias
-                                        sub_label = f"#{j+2}: {match['name']}: {match['similarity']:.1f}%"
-                                        cv2.putText(result_image, sub_label, (x1, y1-(j+2)*20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 200, 200), 1)
-                                
-                                # Mostrar estadísticas en columnas
-                                col_idx = i % 3
-                                with stats_cols[col_idx]:
-                                    st.metric(
-                                        f"Rostro {i+1}", 
-                                        f"{best_match['name']}",
-                                        f"{best_match['similarity']:.1f}%"
-                                    )
+                                        color = (0, 165, 255)  # Naranja para baja similitud
+                                    
+                                    # Dibujar rectángulo y etiqueta principal
+                                    label = f"{best_match['name']}: {best_match['similarity']:.1f}%"
+                                    cv2.rectangle(result_image, (x1, y1), (x2, y2), color, 2)
+                                    cv2.putText(result_image, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+                                    
+                                    # Mostrar coincidencias adicionales si está activado
                                     if show_all_matches and len(matches) > 1:
-                                        st.write("Otras coincidencias:")
-                                        for j, match in enumerate(matches[1:3]):
-                                            st.write(f"- {match['name']}: {match['similarity']:.1f}%")
-                            else:
-                                # No hay coincidencia
-                                label = "Desconocido"
-                                if matches:
-                                    label += f": {matches[0]['similarity']:.1f}%"
-                                
-                                cv2.rectangle(result_image, (x1, y1), (x2, y2), (0, 0, 255), 2)
-                                cv2.putText(result_image, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-                                
-                                # Mostrar estadísticas en columnas
-                                col_idx = i % 3
-                                with stats_cols[col_idx]:
-                                    st.metric(
-                                        f"Rostro {i+1}", 
-                                        "Desconocido",
-                                        f"{matches[0]['similarity']:.1f}%" if matches else "N/A"
-                                    )
+                                        for j, match in enumerate(matches[1:3]):  # Mostrar las siguientes 2 mejores coincidencias
+                                            sub_label = f"#{j+2}: {match['name']}: {match['similarity']:.1f}%"
+                                            cv2.putText(result_image, sub_label, (x1, y1-(j+2)*20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 200, 200), 1)
+                                    
+                                    # Mostrar estadísticas en columnas
+                                    col_idx = i % 3
+                                    with stats_cols[col_idx]:
+                                        st.metric(
+                                            f"Rostro {i+1}", 
+                                            f"{best_match['name']}",
+                                            f"{best_match['similarity']:.1f}%"
+                                        )
+                                        if show_all_matches and len(matches) > 1:
+                                            st.write("Otras coincidencias:")
+                                            for j, match in enumerate(matches[1:3]):
+                                                st.write(f"- {match['name']}: {match['similarity']:.1f}%")
+                                else:
+                                    # No hay coincidencia
+                                    label = "Desconocido"
+                                    if matches:
+                                        label += f": {matches[0]['similarity']:.1f}%"
+                                    
+                                    cv2.rectangle(result_image, (x1, y1), (x2, y2), (0, 0, 255), 2)
+                                    cv2.putText(result_image, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                                    
+                                    # Mostrar estadísticas en columnas
+                                    col_idx = i % 3
+                                    with stats_cols[col_idx]:
+                                        st.metric(
+                                            f"Rostro {i+1}", 
+                                            "Desconocido",
+                                            f"{matches[0]['similarity']:.1f}%" if matches else "N/A"
+                                        )
                 
                 # Mostrar resultado
                 st.subheader("Recognition Result")
