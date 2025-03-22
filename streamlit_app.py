@@ -15,7 +15,7 @@ import pandas as pd
 
 # Importar las utilidades para la base de datos de rostros
 try:
-    from face_database_utils import save_face_database, load_face_database, export_database_json, import_database_json
+    from face_database_utils import save_face_database, load_face_database, export_database_json, import_database_json, print_database_info
     DATABASE_UTILS_AVAILABLE = True
 except ImportError:
     DATABASE_UTILS_AVAILABLE = False
@@ -1441,8 +1441,13 @@ def main():
             if DATABASE_UTILS_AVAILABLE:
                 # Cargar la base de datos desde el archivo persistente
                 st.session_state.face_database = load_face_database()
+                st.sidebar.write(f"Loaded face database with {len(st.session_state.face_database)} entries")
             else:
                 st.session_state.face_database = {}
+        
+        # Imprimir información de depuración
+        if DATABASE_UTILS_AVAILABLE:
+            print_database_info()
         
         # Crear pestañas para las diferentes funcionalidades
         tab1, tab2, tab3 = st.tabs(["Register Face", "Image Recognition", "Real-time Recognition"])
@@ -1570,17 +1575,28 @@ def main():
                                 
                                 # Guardar la base de datos actualizada
                                 if DATABASE_UTILS_AVAILABLE:
-                                    if save_face_database(st.session_state.face_database):
+                                    save_success = save_face_database(st.session_state.face_database)
+                                    if save_success:
                                         st.info("Face database saved successfully!")
+                                        # Mostrar información actualizada de la base de datos
+                                        print_database_info()
+                                    else:
+                                        st.error("Error saving face database!")
                                 
                                 # Mostrar la imagen con el rostro detectado
                                 processed_image, _ = process_face_detections(image, [bboxes[0]], confidence_threshold)
                                 st.image(cv2.cvtColor(processed_image, cv2.COLOR_BGR2RGB), caption=f"Registered face: {person_name}")
+                                
+                                # Forzar recarga de la interfaz para mostrar el rostro registrado
+                                st.experimental_rerun()
                             else:
                                 st.error("Failed to extract embeddings. Please try again with a clearer image.")
             
             # Mostrar tabla de rostros registrados
             st.subheader("Registered Faces")
+            
+            # Debug de contenido de base de datos
+            st.sidebar.write(f"Face database contains {len(st.session_state.face_database)} entries at display time")
             
             if 'face_database' in st.session_state and st.session_state.face_database:
                 # Inicializar variables para la tabla
@@ -1607,58 +1623,65 @@ def main():
                         "Models": models
                     })
                 
-                # Crear DataFrame
-                import pandas as pd
-                df = pd.DataFrame(data)
+                # Debug de los datos procesados
+                st.sidebar.write(f"Processed {len(data)} entries for display")
                 
-                # Mostrar tabla con botones de eliminación
-                for i, row in df.iterrows():
-                    col1, col2, col3, col4, col5 = st.columns([3, 2, 2, 4, 2])
-                    with col1:
-                        st.write(row["Name"])
-                    with col2:
-                        st.write(row["Images"])
-                    with col3:
-                        st.write(row["Embeddings"])
-                    with col4:
-                        st.write(row["Models"])
-                    with col5:
-                        if st.button("Delete", key=f"delete_{row['Name']}"):
-                            # Eliminar el registro
-                            if row["Name"] in st.session_state.face_database:
-                                del st.session_state.face_database[row["Name"]]
-                                
-                                # Guardar la base de datos actualizada
-                                if DATABASE_UTILS_AVAILABLE:
-                                    save_face_database(st.session_state.face_database)
-                                
-                                st.success(f"Deleted {row['Name']} from the database.")
-                                st.experimental_rerun()
-                
-                # Botón para eliminar todos los registros
-                if st.button("Delete All Registered Faces"):
-                    # Mostrar confirmación
-                    if 'confirm_delete_all' not in st.session_state:
-                        st.session_state.confirm_delete_all = False
+                # Verificar si hay datos para mostrar
+                if data:
+                    # Crear DataFrame
+                    import pandas as pd
+                    df = pd.DataFrame(data)
                     
-                    if not st.session_state.confirm_delete_all:
-                        st.warning("Are you sure you want to delete all registered faces? This action cannot be undone.")
-                        col1, col2 = st.columns(2)
+                    # Mostrar tabla con botones de eliminación
+                    for i, row in df.iterrows():
+                        col1, col2, col3, col4, col5 = st.columns([3, 2, 2, 4, 2])
                         with col1:
-                            if st.button("Yes, delete all"):
-                                st.session_state.face_database = {}
-                                
-                                # Guardar la base de datos vacía
-                                if DATABASE_UTILS_AVAILABLE:
-                                    save_face_database({})
-                                
-                                st.session_state.confirm_delete_all = False
-                                st.success("All registered faces have been deleted.")
-                                st.experimental_rerun()
+                            st.write(row["Name"])
                         with col2:
-                            if st.button("Cancel"):
-                                st.session_state.confirm_delete_all = False
-                                st.experimental_rerun()
+                            st.write(row["Images"])
+                        with col3:
+                            st.write(row["Embeddings"])
+                        with col4:
+                            st.write(row["Models"])
+                        with col5:
+                            if st.button("Delete", key=f"delete_{row['Name']}"):
+                                # Eliminar el registro
+                                if row["Name"] in st.session_state.face_database:
+                                    del st.session_state.face_database[row["Name"]]
+                                    
+                                    # Guardar la base de datos actualizada
+                                    if DATABASE_UTILS_AVAILABLE:
+                                        save_face_database(st.session_state.face_database)
+                                    
+                                    st.success(f"Deleted {row['Name']} from the database.")
+                                    st.experimental_rerun()
+                    
+                    # Botón para eliminar todos los registros
+                    if st.button("Delete All Registered Faces"):
+                        # Mostrar confirmación
+                        if 'confirm_delete_all' not in st.session_state:
+                            st.session_state.confirm_delete_all = False
+                        
+                        if not st.session_state.confirm_delete_all:
+                            st.warning("Are you sure you want to delete all registered faces? This action cannot be undone.")
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                if st.button("Yes, delete all"):
+                                    st.session_state.face_database = {}
+                                    
+                                    # Guardar la base de datos vacía
+                                    if DATABASE_UTILS_AVAILABLE:
+                                        save_face_database({})
+                                    
+                                    st.session_state.confirm_delete_all = False
+                                    st.success("All registered faces have been deleted.")
+                                    st.experimental_rerun()
+                            with col2:
+                                if st.button("Cancel"):
+                                    st.session_state.confirm_delete_all = False
+                                    st.experimental_rerun()
+                else:
+                    st.info("No faces registered yet. Use the form above to register faces.")
             else:
                 st.info("No faces registered yet. Use the form above to register faces.")
             

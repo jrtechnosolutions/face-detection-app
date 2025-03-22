@@ -19,6 +19,14 @@ def save_face_database(database):
         database (dict): La base de datos de rostros a guardar
     """
     try:
+        # Verificar si hay datos para guardar
+        if not database:
+            # Si la base de datos está vacía, eliminar el archivo si existe
+            if os.path.exists(DATABASE_FILE):
+                os.remove(DATABASE_FILE)
+                st.sidebar.write("Database was empty - removed existing file")
+            return True
+        
         # Convertir numpy arrays a listas para poder serializarlas
         serializable_db = {}
         for name, info in database.items():
@@ -36,6 +44,10 @@ def save_face_database(database):
         # Guardar en un archivo pickle
         with open(DATABASE_FILE, 'wb') as f:
             pickle.dump(serializable_db, f)
+            
+        # Verificar que el archivo se creó correctamente
+        if os.path.exists(DATABASE_FILE):
+            st.sidebar.write(f"Database saved to {DATABASE_FILE} ({len(serializable_db)} entries)")
         return True
     except Exception as e:
         st.error(f"Error al guardar la base de datos: {str(e)}")
@@ -133,4 +145,31 @@ def import_database_json(json_file):
         return imported_db
     except Exception as e:
         st.error(f"Error al importar la base de datos: {str(e)}")
-        return {} 
+        return {}
+
+def print_database_info():
+    """
+    Imprime información sobre la base de datos actual para depuración.
+    """
+    if 'face_database' in st.session_state:
+        db = st.session_state.face_database
+        st.sidebar.write("--- Database Debug Info ---")
+        st.sidebar.write(f"Database contains {len(db)} entries")
+        
+        # Mostrar nombres en la base de datos
+        if db:
+            names = list(db.keys())
+            st.sidebar.write(f"Names in database: {', '.join(names)}")
+            
+            # Mostrar detalles del primer elemento
+            if names:
+                first_entry = db[names[0]]
+                st.sidebar.write(f"Sample entry for '{names[0]}':")
+                if 'embeddings' in first_entry:
+                    st.sidebar.write(f"- Has {len(first_entry['embeddings'])} embeddings")
+                    st.sidebar.write(f"- Models: {', '.join(first_entry['models'])}")
+                    st.sidebar.write(f"- Count: {first_entry['count']}")
+                elif 'embedding' in first_entry:
+                    st.sidebar.write("- Has single embedding (old format)")
+        else:
+            st.sidebar.write("Database is empty") 
