@@ -249,3 +249,58 @@ def draw_face_matches(image1, bboxes1, image2, bboxes2, comparison_results, thre
                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
     
     return combined_img 
+
+def extract_face_embeddings(image, bbox, model_name="VGG-Face"):
+    """
+    Extract facial embeddings from a face using DeepFace
+    """
+    try:
+        from deepface import DeepFace
+    except ImportError:
+        st.error("DeepFace library is not available. Please install with 'pip install deepface' to use embeddings.")
+        return None
+    
+    # Extract bbox coordinates
+    x1, y1, x2, y2, _ = bbox
+    
+    # Check if the face region is valid
+    if x1 >= x2 or y1 >= y2:
+        return None
+    
+    # Extract face region
+    face_roi = image[y1:y2, x1:x2]
+    
+    # Get embedding for the face
+    try:
+        embedding_info = DeepFace.represent(face_roi, model_name=model_name, enforce_detection=False)[0]
+        return {
+            "embedding": embedding_info["embedding"],
+            "model": model_name
+        }
+    except Exception as e:
+        st.warning(f"Error extracting embedding with {model_name}: {str(e)}")
+        # Try with a fallback model
+        try:
+            fallback_model = "OpenFace"
+            embedding_info = DeepFace.represent(face_roi, model_name=fallback_model, enforce_detection=False)[0]
+            return {
+                "embedding": embedding_info["embedding"],
+                "model": fallback_model
+            }
+        except Exception as e:
+            st.error(f"Failed to extract embeddings: {str(e)}")
+            return None
+
+def extract_face_embeddings_all_models(image, bbox):
+    """
+    Extract facial embeddings using multiple models (VGG-Face, Facenet, OpenFace, ArcFace)
+    """
+    models = ["VGG-Face", "Facenet", "OpenFace", "ArcFace"]
+    embeddings = []
+    
+    for model_name in models:
+        embedding = extract_face_embeddings(image, bbox, model_name=model_name)
+        if embedding:
+            embeddings.append(embedding)
+    
+    return embeddings if embeddings else None 
