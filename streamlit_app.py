@@ -1561,8 +1561,6 @@ def main():
                                 st.image(cv2.cvtColor(processed_image, cv2.COLOR_BGR2RGB), caption=f"Registered face: {person_name}")
                             else:
                                 st.error("Failed to extract embeddings. Please try again with a clearer image.")
-                    else:
-                        st.error("Failed to extract embeddings. Please try again with a clearer image.")
             
             # Mostrar tabla de rostros registrados
             st.subheader("Registered Faces")
