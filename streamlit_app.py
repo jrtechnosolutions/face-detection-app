@@ -1945,6 +1945,22 @@ def main():
                                             f"{best_match['name']}",
                                             f"{best_match['similarity']:.1f}%"
                                         )
+                                        
+                                        # Guardar información para mostrar la imagen de referencia después
+                                        if 'matched_faces' not in st.session_state:
+                                            st.session_state.matched_faces = []
+                                        
+                                        # Extraer la región del rostro para mostrarla
+                                        face_crop = image[y1:y2, x1:x2].copy()
+                                        
+                                        # Guardar información de la coincidencia
+                                        st.session_state.matched_faces.append({
+                                            "face_crop": face_crop,
+                                            "matched_name": best_match['name'],
+                                            "similarity": best_match['similarity'],
+                                            "bbox": (x1, y1, x2, y2)
+                                        })
+                                        
                                         if show_all_matches and len(matches) > 1:
                                             st.write("Otras coincidencias:")
                                             for j, match in enumerate(matches[1:3]):
@@ -1971,6 +1987,34 @@ def main():
                 if uploaded_file is not None:
                     st.subheader("Recognition Result")
                     st.image(result_image, channels='BGR', use_container_width=True)
+                    
+                    # Mostrar comparación lado a lado de cada rostro con su coincidencia
+                    if 'matched_faces' in st.session_state and st.session_state.matched_faces:
+                        st.subheader("Comparación de rostros")
+                        st.write("A continuación se muestra cada rostro detectado junto con su coincidencia en la base de datos:")
+                        
+                        for idx, match_info in enumerate(st.session_state.matched_faces):
+                            # Crear columnas para la comparación
+                            comp_col1, comp_col2 = st.columns(2)
+                            
+                            # Mostrar el rostro detectado
+                            with comp_col1:
+                                st.image(cv2.cvtColor(match_info["face_crop"], cv2.COLOR_BGR2RGB), 
+                                        caption=f"Rostro detectado #{idx+1}", 
+                                        use_column_width=True)
+                            
+                            # Mostrar imagen de referencia si existe
+                            with comp_col2:
+                                # Obtener la primera imagen de referencia de la carpeta de la base de datos si existe
+                                reference_name = match_info["matched_name"]
+                                st.write(f"Coincidencia: **{reference_name}** ({match_info['similarity']:.1f}%)")
+                                
+                                # Aquí se puede añadir código para cargar una imagen de referencia de la base de datos
+                                # Por ahora solo mostramos un placeholder
+                                st.info(f"La imagen de referencia para {reference_name} no está disponible en esta versión. Se implementará en futuras actualizaciones.")
+                        
+                        # Limpiar el estado para la próxima ejecución
+                        del st.session_state.matched_faces
         
         with tab3:
             st.header("Real-time Recognition")
