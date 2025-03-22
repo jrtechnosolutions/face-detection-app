@@ -1538,9 +1538,44 @@ def main():
                                                     # Añadir nuevo modelo
                                                     st.session_state.face_database[person_name]['models'].append(model_name)
                                                     st.session_state.face_database[person_name]['embeddings'].append(embedding['embedding'])
+                                        
+                                        # Incrementar contador
+                                        st.session_state.face_database[person_name]['count'] += 1
+                                    else:
+                                        # Crear nueva entrada en la base de datos
+                                        st.sidebar.write(f"Creating new entry for {person_name} (multiple faces)")
+                                        
+                                        models = []
+                                        embeddings = []
+                                        
+                                        for embedding in embeddings_all_models:
+                                            models.append(embedding['model'])
+                                            embeddings.append(embedding['embedding'])
+                                        
+                                        st.session_state.face_database[person_name] = {
+                                            'embeddings': embeddings,
+                                            'models': models,
+                                            'count': 1
+                                        }
                                     
-                                    # Incrementar contador
-                                    st.session_state.face_database[person_name]['count'] += 1
+                                    st.success(f"Face registered successfully for {person_name}!")
+                                    
+                                    # Guardar la base de datos actualizada
+                                    if DATABASE_UTILS_AVAILABLE:
+                                        save_success = save_face_database(st.session_state.face_database)
+                                        if save_success:
+                                            st.info("Face database saved successfully!")
+                                            # Mostrar información actualizada de la base de datos
+                                            print_database_info()
+                                        else:
+                                            st.error("Error saving face database!")
+                                    
+                                    # Mostrar la imagen con el rostro detectado
+                                    processed_image, _ = process_face_detections(image, [bboxes[0]], confidence_threshold)
+                                    st.image(cv2.cvtColor(processed_image, cv2.COLOR_BGR2RGB), caption=f"Registered face: {person_name}")
+                                    
+                                    # Forzar recarga de la interfaz para mostrar el rostro registrado
+                                    st.rerun()
                                 else:
                                     st.error("Failed to extract embeddings. Please try again with a clearer image.")
                         else:
@@ -1570,6 +1605,25 @@ def main():
                                                 # Añadir nuevo modelo
                                                 st.session_state.face_database[person_name]['models'].append(model_name)
                                                 st.session_state.face_database[person_name]['embeddings'].append(embedding['embedding'])
+                                        
+                                        # Incrementar contador
+                                        st.session_state.face_database[person_name]['count'] += 1
+                                else:
+                                    # Crear nueva entrada en la base de datos
+                                    st.sidebar.write(f"Creating new entry for {person_name}")
+                                    
+                                    models = []
+                                    embeddings = []
+                                    
+                                    for embedding in embeddings_all_models:
+                                        models.append(embedding['model'])
+                                        embeddings.append(embedding['embedding'])
+                                    
+                                    st.session_state.face_database[person_name] = {
+                                        'embeddings': embeddings,
+                                        'models': models,
+                                        'count': 1
+                                    }
                                 
                                 st.success(f"Face registered successfully for {person_name}!")
                                 
