@@ -2002,29 +2002,35 @@ def main():
                         st.write("Below you can see each detected face alongside its match in the database:")
                         
                         for idx, match_info in enumerate(st.session_state.matched_faces):
-                            # Crear columnas para la comparación
-                            comp_col1, comp_col2 = st.columns(2)
+                            # Crear contenedor para la comparación
+                            comparison_container = st.container()
                             
-                            # Mostrar el rostro detectado
-                            with comp_col1:
-                                st.image(cv2.cvtColor(match_info["face_crop"], cv2.COLOR_BGR2RGB), 
-                                        caption=f"Detected Face #{idx+1}", 
-                                        use_column_width=True)
-                            
-                            # Mostrar imagen de referencia si existe
-                            with comp_col2:
-                                # Obtener la primera imagen de referencia de la carpeta de la base de datos si existe
-                                reference_name = match_info["matched_name"]
-                                st.write(f"Match: **{reference_name}** ({match_info['similarity']:.1f}%)")
+                            # Crear columnas dentro del contenedor
+                            with comparison_container:
+                                comp_col1, comp_col2 = st.columns(2)
                                 
-                                # Intentar mostrar la imagen de referencia guardada
-                                if reference_name in st.session_state.face_database and 'face_image' in st.session_state.face_database[reference_name]:
-                                    reference_image = st.session_state.face_database[reference_name]['face_image']
-                                    st.image(cv2.cvtColor(reference_image, cv2.COLOR_BGR2RGB), 
-                                            caption=f"Reference image of {reference_name}", 
-                                            use_column_width=True)
-                                else:
-                                    st.info(f"The reference image for {reference_name} is not available. Please re-register this person to see their image here.")
+                                # Mostrar el rostro detectado
+                                with comp_col1:
+                                    st.write(f"**Detected Face #{idx+1}**")
+                                    st.image(
+                                        cv2.cvtColor(match_info["face_crop"], cv2.COLOR_BGR2RGB),
+                                        width=250  # Usar ancho fijo en lugar de use_column_width
+                                    )
+                                
+                                # Mostrar imagen de referencia si existe
+                                with comp_col2:
+                                    reference_name = match_info["matched_name"]
+                                    st.write(f"**Match: {reference_name}** ({match_info['similarity']:.1f}%)")
+                                    
+                                    # Intentar mostrar la imagen de referencia guardada
+                                    if reference_name in st.session_state.face_database and 'face_image' in st.session_state.face_database[reference_name]:
+                                        reference_image = st.session_state.face_database[reference_name]['face_image']
+                                        st.image(
+                                            cv2.cvtColor(reference_image, cv2.COLOR_BGR2RGB),
+                                            width=250  # Usar ancho fijo en lugar de use_column_width
+                                        )
+                                    else:
+                                        st.info(f"The reference image for {reference_name} is not available. Please re-register this person to see their image here.")
                         
                         # Limpiar el estado para la próxima ejecución
                         del st.session_state.matched_faces
