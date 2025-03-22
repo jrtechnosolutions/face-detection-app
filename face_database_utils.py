@@ -36,10 +36,18 @@ def save_face_database(database):
                 serializable_db[name]['embeddings'] = [emb.tolist() if isinstance(emb, np.ndarray) else emb for emb in info['embeddings']]
                 serializable_db[name]['models'] = info['models']
                 serializable_db[name]['count'] = info['count']
+                
+                # Guardar imagen facial si existe
+                if 'face_image' in info:
+                    serializable_db[name]['face_image'] = info['face_image'].tolist() if isinstance(info['face_image'], np.ndarray) else info['face_image']
             elif 'embedding' in info:
                 # Formato antiguo
                 serializable_db[name]['embedding'] = info['embedding'].tolist() if isinstance(info['embedding'], np.ndarray) else info['embedding']
                 serializable_db[name]['count'] = info.get('count', 1)
+                
+                # Guardar imagen facial si existe
+                if 'face_image' in info:
+                    serializable_db[name]['face_image'] = info['face_image'].tolist() if isinstance(info['face_image'], np.ndarray) else info['face_image']
         
         # Guardar en un archivo pickle
         with open(DATABASE_FILE, 'wb') as f:
@@ -71,8 +79,14 @@ def load_face_database():
         for name, info in database.items():
             if 'embeddings' in info:
                 database[name]['embeddings'] = [np.array(emb) if isinstance(emb, list) else emb for emb in info['embeddings']]
+                # Cargar imagen facial si existe
+                if 'face_image' in info:
+                    database[name]['face_image'] = np.array(info['face_image']) if isinstance(info['face_image'], list) else info['face_image']
             elif 'embedding' in info:
                 database[name]['embedding'] = np.array(info['embedding']) if isinstance(info['embedding'], list) else info['embedding']
+                # Cargar imagen facial si existe
+                if 'face_image' in info:
+                    database[name]['face_image'] = np.array(info['face_image']) if isinstance(info['face_image'], list) else info['face_image']
         
         return database
     except Exception as e:
@@ -99,11 +113,25 @@ def export_database_json():
                     ]
                     serializable_db[name]['models'] = info['models']
                     serializable_db[name]['count'] = info['count']
+                    
+                    # Incluir imagen facial si existe
+                    if 'face_image' in info:
+                        serializable_db[name]['face_image'] = base64.b64encode(
+                            np.array(info['face_image']).tobytes()
+                        ).decode('utf-8')
+                        serializable_db[name]['face_image_shape'] = info['face_image'].shape
                 elif 'embedding' in info:
                     serializable_db[name]['embedding'] = base64.b64encode(
                         np.array(info['embedding']).tobytes()
                     ).decode('utf-8')
                     serializable_db[name]['count'] = info.get('count', 1)
+                    
+                    # Incluir imagen facial si existe
+                    if 'face_image' in info:
+                        serializable_db[name]['face_image'] = base64.b64encode(
+                            np.array(info['face_image']).tobytes()
+                        ).decode('utf-8')
+                        serializable_db[name]['face_image_shape'] = info['face_image'].shape
             
             # Guardar en un archivo JSON
             export_file = "face_database_export.json"
@@ -137,10 +165,22 @@ def import_database_json(json_file):
                     np.frombuffer(base64.b64decode(emb), dtype=np.float32) 
                     for emb in info['embeddings']
                 ]
+                
+                # Importar imagen facial si existe
+                if 'face_image' in info and 'face_image_shape' in info:
+                    face_data = np.frombuffer(base64.b64decode(info['face_image']), dtype=np.uint8)
+                    shape = info['face_image_shape']
+                    imported_db[name]['face_image'] = face_data.reshape(shape)
             elif 'embedding' in info:
                 imported_db[name]['embedding'] = np.frombuffer(
                     base64.b64decode(info['embedding']), dtype=np.float32
                 )
+                
+                # Importar imagen facial si existe
+                if 'face_image' in info and 'face_image_shape' in info:
+                    face_data = np.frombuffer(base64.b64decode(info['face_image']), dtype=np.uint8)
+                    shape = info['face_image_shape']
+                    imported_db[name]['face_image'] = face_data.reshape(shape)
         
         return imported_db
     except Exception as e:
@@ -169,7 +209,19 @@ def print_database_info():
                     st.sidebar.write(f"- Has {len(first_entry['embeddings'])} embeddings")
                     st.sidebar.write(f"- Models: {', '.join(first_entry['models'])}")
                     st.sidebar.write(f"- Count: {first_entry['count']}")
+                    
+                    # Mostrar si tiene imagen
+                    if 'face_image' in first_entry:
+                        st.sidebar.write(f"- Has reference face image: {first_entry['face_image'].shape}")
+                    else:
+                        st.sidebar.write("- No reference image")
                 elif 'embedding' in first_entry:
                     st.sidebar.write("- Has single embedding (old format)")
+                    
+                    # Mostrar si tiene imagen
+                    if 'face_image' in first_entry:
+                        st.sidebar.write(f"- Has reference face image: {first_entry['face_image'].shape}")
+                    else:
+                        st.sidebar.write("- No reference image")
         else:
             st.sidebar.write("Database is empty") 
