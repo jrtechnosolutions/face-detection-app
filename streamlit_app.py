@@ -1591,6 +1591,10 @@ def main():
                             embeddings_all_models = extract_face_embeddings_all_models(image, bboxes[0])
                             
                             if embeddings_all_models:
+                                # Extraer la región del rostro para guardarla
+                                x1, y1, x2, y2, _ = bboxes[0]
+                                face_crop = image[y1:y2, x1:x2].copy()
+                                
                                 # Guardar en la base de datos
                                 if add_to_existing and person_name in st.session_state.face_database:
                                     # Añadir a persona existente
@@ -1614,6 +1618,9 @@ def main():
                                                 st.session_state.face_database[person_name]['models'].append(model_name)
                                                 st.session_state.face_database[person_name]['embeddings'].append(embedding['embedding'])
                                         
+                                        # Actualizar imagen de referencia
+                                        st.session_state.face_database[person_name]['face_image'] = face_crop
+                                        
                                         # Incrementar contador
                                         st.session_state.face_database[person_name]['count'] += 1
                                 else:
@@ -1630,7 +1637,8 @@ def main():
                                     st.session_state.face_database[person_name] = {
                                         'embeddings': embeddings,
                                         'models': models,
-                                        'count': 1
+                                        'count': 1,
+                                        'face_image': face_crop
                                     }
                                 
                                 st.success(f"Face registered successfully for {person_name}!")
@@ -2030,22 +2038,10 @@ def main():
                                             width=250  # Usar ancho fijo en lugar de use_column_width
                                         )
                                     else:
-                                        # Depuración para ver qué hay en la base de datos
-                                        st.error(f"Debug: Reference image not found for {reference_name}")
-                                        
-                                        # Mostrar las claves disponibles para este usuario
-                                        if reference_name in st.session_state.face_database:
-                                            st.write("Available keys:", list(st.session_state.face_database[reference_name].keys()))
-                                            
-                                            # Si hay embeddings pero no imagen, mostrar mensaje informativo
-                                            if 'embeddings' in st.session_state.face_database[reference_name]:
-                                                st.info(f"User {reference_name} exists but has no reference image. Please re-register.")
-                                            else:
-                                                st.warning(f"User {reference_name} exists but has invalid data structure.")
-                                        else:
-                                            st.warning(f"User {reference_name} not found in database, but was matched?")
-                        
-                        # Limpiar el estado para la próxima ejecución
+                                        # Mensaje de error simplificado
+                                        st.info(f"No reference image available for {reference_name}. Please re-register this person.")
+                          
+                          # Limpiar el estado para la próxima ejecución
                         del st.session_state.matched_faces
         
         with tab3:
