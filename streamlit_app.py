@@ -22,7 +22,7 @@ except ImportError:
 
 # Import functions for face comparison
 try:
-    from face_comparison import compare_faces, compare_faces_embeddings, generate_comparison_report_english, draw_face_matches
+    from face_comparison import compare_faces, compare_faces_embeddings, generate_comparison_report_english, draw_face_matches, extract_face_embeddings, extract_face_embeddings_all_models
     FACE_COMPARISON_AVAILABLE = True
 except ImportError:
     FACE_COMPARISON_AVAILABLE = False
