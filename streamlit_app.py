@@ -1458,9 +1458,17 @@ def main():
             # Añadir el file_uploader para la imagen
             uploaded_file = st.file_uploader("Upload an image", type=['jpg', 'jpeg', 'png'], key="register_face_image")
             
+            # Limpiar el nombre cuando se carga una imagen nueva
+            if uploaded_file and 'last_uploaded_file' in st.session_state and st.session_state.last_uploaded_file != uploaded_file.name:
+                st.session_state.person_name = ""
+            
+            if uploaded_file:
+                # Guardar el nombre del archivo actual para comparar en la próxima carga
+                st.session_state.last_uploaded_file = uploaded_file.name
+            
             # Formulario de registro
             with st.form("face_registration_form"):
-                person_name = st.text_input("Person's name")
+                person_name = st.text_input("Person's name", key="person_name")
                 
                 # Selector de modelo
                 model_choice = st.selectbox(
@@ -1690,7 +1698,8 @@ def main():
                         "Name": name,
                         "Images": num_images,
                         "Embeddings": num_embeddings,
-                        "Models": models
+                        "Models": models,
+                        "Face": info.get('face_image', None)
                     })
                 
                 # Debug de los datos procesados
@@ -1698,13 +1707,37 @@ def main():
                 
                 # Verificar si hay datos para mostrar
                 if data:
-                    # Crear DataFrame
-                    import pandas as pd
-                    df = pd.DataFrame(data)
+                    # Crear cabeceras de la tabla
+                    col_thumb, col1, col2, col3, col4, col5 = st.columns([2, 3, 2, 2, 4, 2])
+                    
+                    with col_thumb:
+                        st.write("**Thumbnail**")
+                    with col1:
+                        st.write("**Name**")
+                    with col2:
+                        st.write("**Images**")
+                    with col3:
+                        st.write("**Embeddings**")
+                    with col4:
+                        st.write("**Models**")
+                    with col5:
+                        st.write("**Actions**")
                     
                     # Mostrar tabla con botones de eliminación
-                    for i, row in df.iterrows():
-                        col1, col2, col3, col4, col5 = st.columns([3, 2, 2, 4, 2])
+                    for i, row in enumerate(data):
+                        col_thumb, col1, col2, col3, col4, col5 = st.columns([2, 3, 2, 2, 4, 2])
+                        
+                        # Mostrar miniatura si está disponible
+                        with col_thumb:
+                            if row["Face"] is not None:
+                                # Redimensionar para crear miniatura
+                                face_img = row["Face"]
+                                h, w = face_img.shape[:2]
+                                thumbnail = cv2.resize(face_img, (w//4, h//4))
+                                st.image(cv2.cvtColor(thumbnail, cv2.COLOR_BGR2RGB), width=50)
+                            else:
+                                st.write("No image")
+                                
                         with col1:
                             st.write(row["Name"])
                         with col2:
