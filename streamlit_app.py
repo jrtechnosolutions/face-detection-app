@@ -1588,7 +1588,7 @@ def main():
                                 st.image(cv2.cvtColor(processed_image, cv2.COLOR_BGR2RGB), caption=f"Registered face: {person_name}")
                                 
                                 # Forzar recarga de la interfaz para mostrar el rostro registrado
-                                st.experimental_rerun()
+                                st.rerun()
                             else:
                                 st.error("Failed to extract embeddings. Please try again with a clearer image.")
             
@@ -1654,7 +1654,7 @@ def main():
                                         save_face_database(st.session_state.face_database)
                                     
                                     st.success(f"Deleted {row['Name']} from the database.")
-                                    st.experimental_rerun()
+                                    st.rerun()
                     
                     # Botón para eliminar todos los registros
                     if st.button("Delete All Registered Faces"):
@@ -1675,11 +1675,11 @@ def main():
                                     
                                     st.session_state.confirm_delete_all = False
                                     st.success("All registered faces have been deleted.")
-                                    st.experimental_rerun()
+                                    st.rerun()
                             with col2:
                                 if st.button("Cancel"):
                                     st.session_state.confirm_delete_all = False
-                                    st.experimental_rerun()
+                                    st.rerun()
                 else:
                     st.info("No faces registered yet. Use the form above to register faces.")
             else:
@@ -1717,7 +1717,7 @@ def main():
                                     # Guardar la base de datos actualizada
                                     if save_face_database(st.session_state.face_database):
                                         st.success("Database imported and saved successfully!")
-                                        st.experimental_rerun()
+                                        st.rerun()
         
         with tab2:
             st.header("Image Recognition")
