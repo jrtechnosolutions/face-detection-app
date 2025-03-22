@@ -1835,6 +1835,8 @@ def main():
                         
                         if not bboxes:
                             st.error("No se detectaron rostros en la imagen.")
+                            # Inicializar result_image aunque no haya rostros
+                            result_image = image.copy()
                         else:
                             # Mostrar imagen con rostros detectados
                             st.image(processed_image, channels='BGR', caption="Faces detected")
@@ -1965,9 +1967,10 @@ def main():
                                             f"{matches[0]['similarity']:.1f}%" if matches else "N/A"
                                         )
                 
-                # Mostrar resultado
-                st.subheader("Recognition Result")
-                st.image(result_image, channels='BGR', use_container_width=True)
+                # Mostrar resultado solo si hay una imagen cargada
+                if uploaded_file is not None:
+                    st.subheader("Recognition Result")
+                    st.image(result_image, channels='BGR', use_container_width=True)
         
         with tab3:
             st.header("Real-time Recognition")
