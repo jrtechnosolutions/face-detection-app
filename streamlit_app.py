@@ -13,6 +13,14 @@ import pickle
 from sklearn.metrics.pairwise import cosine_similarity # type: ignore
 import pandas as pd
 
+# Importar las utilidades para la base de datos de rostros
+try:
+    from face_database_utils import save_face_database, load_face_database, export_database_json, import_database_json
+    DATABASE_UTILS_AVAILABLE = True
+except ImportError:
+    DATABASE_UTILS_AVAILABLE = False
+    st.warning("Database utilities are not available. Face recognition data will not be persistent between sessions.")
+
 # Importar DeepFace para reconocimiento facial avanzado
 try:
     from deepface import DeepFace
@@ -1430,7 +1438,11 @@ def main():
         
         # Inicializar base de datos de rostros si no existe
         if 'face_database' not in st.session_state:
-            st.session_state.face_database = {}
+            if DATABASE_UTILS_AVAILABLE:
+                # Cargar la base de datos desde el archivo persistente
+                st.session_state.face_database = load_face_database()
+            else:
+                st.session_state.face_database = {}
         
         # Crear pestañas para las diferentes funcionalidades
         tab1, tab2, tab3 = st.tabs(["Register Face", "Image Recognition", "Real-time Recognition"])
@@ -1556,6 +1568,11 @@ def main():
                                 
                                 st.success(f"Face registered successfully for {person_name}!")
                                 
+                                # Guardar la base de datos actualizada
+                                if DATABASE_UTILS_AVAILABLE:
+                                    if save_face_database(st.session_state.face_database):
+                                        st.info("Face database saved successfully!")
+                                
                                 # Mostrar la imagen con el rostro detectado
                                 processed_image, _ = process_face_detections(image, [bboxes[0]], confidence_threshold)
                                 st.image(cv2.cvtColor(processed_image, cv2.COLOR_BGR2RGB), caption=f"Registered face: {person_name}")
@@ -1610,6 +1627,11 @@ def main():
                             # Eliminar el registro
                             if row["Name"] in st.session_state.face_database:
                                 del st.session_state.face_database[row["Name"]]
+                                
+                                # Guardar la base de datos actualizada
+                                if DATABASE_UTILS_AVAILABLE:
+                                    save_face_database(st.session_state.face_database)
+                                
                                 st.success(f"Deleted {row['Name']} from the database.")
                                 st.experimental_rerun()
                 
@@ -1625,6 +1647,11 @@ def main():
                         with col1:
                             if st.button("Yes, delete all"):
                                 st.session_state.face_database = {}
+                                
+                                # Guardar la base de datos vacía
+                                if DATABASE_UTILS_AVAILABLE:
+                                    save_face_database({})
+                                
                                 st.session_state.confirm_delete_all = False
                                 st.success("All registered faces have been deleted.")
                                 st.experimental_rerun()
@@ -1634,6 +1661,40 @@ def main():
                                 st.experimental_rerun()
             else:
                 st.info("No faces registered yet. Use the form above to register faces.")
+            
+            # Añadir botones para importar/exportar la base de datos
+            if DATABASE_UTILS_AVAILABLE:
+                st.subheader("Database Management")
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # Exportar base de datos
+                    if st.button("Export Face Database") and st.session_state.face_database:
+                        export_file = export_database_json()
+                        if export_file:
+                            with open(export_file, "rb") as f:
+                                st.download_button(
+                                    label="Download JSON Database",
+                                    data=f,
+                                    file_name="face_database.json",
+                                    mime="application/json"
+                                )
+                
+                with col2:
+                    # Importar base de datos
+                    uploaded_json = st.file_uploader("Import Face Database", type=["json"], key="import_database")
+                    if uploaded_json is not None:
+                        if st.button("Process Import"):
+                            with st.spinner("Importing database..."):
+                                imported_db = import_database_json(uploaded_json)
+                                if imported_db:
+                                    # Actualizar la base de datos actual
+                                    st.session_state.face_database.update(imported_db)
+                                    
+                                    # Guardar la base de datos actualizada
+                                    if save_face_database(st.session_state.face_database):
+                                        st.success("Database imported and saved successfully!")
+                                        st.experimental_rerun()
         
         with tab2:
             st.header("Image Recognition")
