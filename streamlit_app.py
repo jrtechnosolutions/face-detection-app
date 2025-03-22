@@ -1514,8 +1514,12 @@ def main():
                             # Extraer embeddings del primer rostro
                             if bboxes and len(bboxes) > 0 and len(bboxes[0]) == 5:
                                 embeddings_all_models = extract_face_embeddings_all_models(image, bboxes[0])
-                            
+                                
                                 if embeddings_all_models:
+                                    # Guardar la imagen del rostro para referencia
+                                    x1, y1, x2, y2, _ = bboxes[0]
+                                    face_crop = image[y1:y2, x1:x2].copy()
+                                    
                                     # Guardar en la base de datos
                                     if add_to_existing and person_name in st.session_state.face_database:
                                         # Añadir a persona existente
@@ -1538,12 +1542,15 @@ def main():
                                                     # Añadir nuevo modelo
                                                     st.session_state.face_database[person_name]['models'].append(model_name)
                                                     st.session_state.face_database[person_name]['embeddings'].append(embedding['embedding'])
+                                            
+                                            # Actualizar imagen de referencia
+                                            st.session_state.face_database[person_name]['face_image'] = face_crop
                                         
                                         # Incrementar contador
                                         st.session_state.face_database[person_name]['count'] += 1
                                     else:
                                         # Crear nueva entrada en la base de datos
-                                        st.sidebar.write(f"Creating new entry for {person_name} (multiple faces)")
+                                        st.sidebar.write(f"Creating new entry for {person_name}")
                                         
                                         models = []
                                         embeddings = []
@@ -1555,7 +1562,8 @@ def main():
                                         st.session_state.face_database[person_name] = {
                                             'embeddings': embeddings,
                                             'models': models,
-                                            'count': 1
+                                            'count': 1,
+                                            'face_image': face_crop
                                         }
                                     
                                     st.success(f"Face registered successfully for {person_name}!")
@@ -1990,8 +1998,8 @@ def main():
                     
                     # Mostrar comparación lado a lado de cada rostro con su coincidencia
                     if 'matched_faces' in st.session_state and st.session_state.matched_faces:
-                        st.subheader("Comparación de rostros")
-                        st.write("A continuación se muestra cada rostro detectado junto con su coincidencia en la base de datos:")
+                        st.subheader("Face Comparison")
+                        st.write("Below you can see each detected face alongside its match in the database:")
                         
                         for idx, match_info in enumerate(st.session_state.matched_faces):
                             # Crear columnas para la comparación
@@ -2000,18 +2008,23 @@ def main():
                             # Mostrar el rostro detectado
                             with comp_col1:
                                 st.image(cv2.cvtColor(match_info["face_crop"], cv2.COLOR_BGR2RGB), 
-                                        caption=f"Rostro detectado #{idx+1}", 
+                                        caption=f"Detected Face #{idx+1}", 
                                         use_column_width=True)
                             
                             # Mostrar imagen de referencia si existe
                             with comp_col2:
                                 # Obtener la primera imagen de referencia de la carpeta de la base de datos si existe
                                 reference_name = match_info["matched_name"]
-                                st.write(f"Coincidencia: **{reference_name}** ({match_info['similarity']:.1f}%)")
+                                st.write(f"Match: **{reference_name}** ({match_info['similarity']:.1f}%)")
                                 
-                                # Aquí se puede añadir código para cargar una imagen de referencia de la base de datos
-                                # Por ahora solo mostramos un placeholder
-                                st.info(f"La imagen de referencia para {reference_name} no está disponible en esta versión. Se implementará en futuras actualizaciones.")
+                                # Intentar mostrar la imagen de referencia guardada
+                                if reference_name in st.session_state.face_database and 'face_image' in st.session_state.face_database[reference_name]:
+                                    reference_image = st.session_state.face_database[reference_name]['face_image']
+                                    st.image(cv2.cvtColor(reference_image, cv2.COLOR_BGR2RGB), 
+                                            caption=f"Reference image of {reference_name}", 
+                                            use_column_width=True)
+                                else:
+                                    st.info(f"The reference image for {reference_name} is not available. Please re-register this person to see their image here.")
                         
                         # Limpiar el estado para la próxima ejecución
                         del st.session_state.matched_faces
