@@ -658,8 +658,8 @@ def main():
                 
                 # Buttons to control the camera
                 col1, col2 = st.columns(2)
-                start_button = col1.button("Start Camera", on_click=start_camera)
-                stop_button = col2.button("Stop Camera", on_click=stop_camera)
+                start_button = col1.button("Start Camera", key="start_camera")
+                stop_button = col2.button("Stop Camera", key="stop_camera")
                 
                 # Show message when camera is stopped
                 if 'camera_stopped' in st.session_state and st.session_state.camera_stopped:
@@ -914,8 +914,8 @@ def main():
                 
                 # Buttons to control the camera
                 col1, col2 = st.columns(2)
-                start_button = col1.button("Start Camera", on_click=start_feature_camera)
-                stop_button = col2.button("Stop Camera", on_click=stop_feature_camera)
+                start_button = col1.button("Start Camera", key="start_feature_camera")
+                stop_button = col2.button("Stop Camera", key="stop_feature_camera")
                 
                 # Show message when camera is stopped
                 if 'feature_camera_stopped' in st.session_state and st.session_state.feature_camera_stopped:
@@ -2127,12 +2127,16 @@ def main():
                 if 'recognition_history' not in st.session_state:
                     st.session_state.recognition_history = {}
                 
-                # Botones para controlar la cámara
+                # Camera control buttons
                 col1, col2 = st.columns(2)
-                start_button = col1.button("Iniciar Cámara", key="start_recognition_camera", 
+                start_button = col1.button("Start Camera", key="start_recognition_camera",
                                           on_click=lambda: setattr(st.session_state, 'recognition_camera_running', True))
-                stop_button = col2.button("Detener Cámara", key="stop_recognition_camera", 
+                stop_button = col2.button("Stop Camera", key="stop_recognition_camera",
                                          on_click=lambda: setattr(st.session_state, 'recognition_camera_running', False))
+                
+                if not cap.isOpened():
+                    st.error("Could not access the camera. Make sure it's connected and not being used by another application.")
+                    st.session_state.recognition_camera_running = False
                 
                 # Placeholder para el video
                 video_placeholder = st.empty()
@@ -2147,7 +2151,7 @@ def main():
                     time_metric = st.empty()
                 
                 if st.session_state.recognition_camera_running:
-                    st.info("Cámara activada. Procesando video en tiempo real...")
+                    st.info("Camera activated. Processing video in real-time...")
                     
                     # Inicializar webcam
                     cap = cv2.VideoCapture(0)
@@ -2350,7 +2354,7 @@ def main():
                             # Limpiar historial de reconocimiento
                             st.session_state.recognition_history = {}
                 else:
-                    st.info("Haga clic en 'Iniciar Cámara' para comenzar el reconocimiento en tiempo real.")
+                    st.info("Click 'Start Camera' to begin real-time recognition.")
 
 # Si se ejecuta este archivo directamente, llamar a la función main
 if __name__ == "__main__":
