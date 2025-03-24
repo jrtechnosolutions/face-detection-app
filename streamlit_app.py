@@ -174,8 +174,6 @@ def main():
         
         for bbox in bboxes:
             x1, y1, x2, y2, _ = bbox
-            roi_gray = gray[y1:y2, x1:x2]
-            roi_color = result_frame[y1:y2, x1:x2]
             face_width = x2 - x1
             face_height = y2 - y1
             
@@ -183,170 +181,76 @@ def main():
             if detect_eyes:
                 # Adjust region of interest to focus on the upper part of the face
                 upper_face_y1 = y1
-                upper_face_y2 = y1 + int(face_height * 0.55)  # Slightly reduced to focus more on the eye area
+                upper_face_y2 = y1 + int(face_height * 0.45)  # Reduced to focus more on the eye area
                 
-                # For profile faces, we need to search the entire upper region
-                # as well as the left and right sides separately
+                # Extract ROI for eyes
+                eye_roi_gray = gray[upper_face_y1:upper_face_y2, x1:x2]
+                eye_roi_color = result_frame[upper_face_y1:upper_face_y2, x1:x2]
                 
-                # Full upper region for profile faces
-                upper_face_roi_gray = gray[upper_face_y1:upper_face_y2, x1:x2]
-                upper_face_roi_color = result_frame[upper_face_y1:upper_face_y2, x1:x2]
-                
-                # Split the upper region into two halves (left and right) to search for eyes individually
-                mid_x = x1 + face_width // 2
-                left_eye_roi_gray = gray[upper_face_y1:upper_face_y2, x1:mid_x]
-                right_eye_roi_gray = gray[upper_face_y1:upper_face_y2, mid_x:x2]
-                
-                left_eye_roi_color = result_frame[upper_face_y1:upper_face_y2, x1:mid_x]
-                right_eye_roi_color = result_frame[upper_face_y1:upper_face_y2, mid_x:x2]
-                
-                # Apply histogram equalization and contrast enhancement for all regions
-                if upper_face_roi_gray.size > 0:
-                    upper_face_roi_gray = cv2.equalizeHist(upper_face_roi_gray)
-                    
-                    # Enhance contrast
+                if eye_roi_gray.size > 0:
+                    # Enhance contrast for better detection
+                    eye_roi_gray = cv2.equalizeHist(eye_roi_gray)
                     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-                    upper_face_roi_gray = clahe.apply(upper_face_roi_gray)
+                    eye_roi_gray = clahe.apply(eye_roi_gray)
                     
-                    # First try to detect eyes in the full upper region (for profile faces)
-                    full_eyes = eye_cascade.detectMultiScale(
-                        upper_face_roi_gray, 
-                        scaleFactor=1.02,  # More sensitive for profile faces
-                        minNeighbors=max(1, eye_sensitivity-3),  # Even more sensitive
-                        minSize=(int(face_width * 0.07), int(face_width * 0.07)),
-                        maxSize=(int(face_width * 0.3), int(face_width * 0.3))
+                    # Detect eyes with adjusted parameters
+                    eyes = eye_cascade.detectMultiScale(
+                        eye_roi_gray,
+                        scaleFactor=1.05,
+                        minNeighbors=max(3, eye_sensitivity),
+                        minSize=(int(face_width * 0.1), int(face_width * 0.1)),
+                        maxSize=(int(face_width * 0.25), int(face_width * 0.25))
                     )
                     
-                    # If we found eyes in the full region, use those
-                    if len(full_eyes) > 0:
-                        # Sort by size (area) and take up to 2 largest
-                        full_eyes = sorted(full_eyes, key=lambda e: e[2] * e[3], reverse=True)
-                        full_eyes = full_eyes[:2]  # Take at most 2 eyes
+                    # Process detected eyes
+                    if len(eyes) > 0:
+                        # Sort by size and position
+                        eyes = sorted(eyes, key=lambda e: (e[2] * e[3], -e[1]))  # Sort by size and vertical position
+                        eyes = eyes[:2]  # Take at most 2 largest eyes
                         
-                        for ex, ey, ew, eh in full_eyes:
-                            eye_count += 1
-                            cv2.rectangle(upper_face_roi_color, (ex, ey), (ex+ew, ey+eh), (255, 0, 0), 2)
-                            cv2.putText(upper_face_roi_color, "Eye", (ex, ey-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
-                    else:
-                        # If no eyes found in full region, try left and right separately
-                        if left_eye_roi_gray.size > 0:
-                            left_eye_roi_gray = cv2.equalizeHist(left_eye_roi_gray)
-                            left_eye_roi_gray = clahe.apply(left_eye_roi_gray)
-                            
-                            left_eyes = eye_cascade.detectMultiScale(
-                                left_eye_roi_gray, 
-                                scaleFactor=1.03,
-                                minNeighbors=max(1, eye_sensitivity-2),
-                                minSize=(int(face_width * 0.08), int(face_width * 0.08)),
-                                maxSize=(int(face_width * 0.25), int(face_width * 0.25))
-                            )
-                            
-                            if len(left_eyes) > 0:
-                                # Sort by size and take the largest
-                                left_eyes = sorted(left_eyes, key=lambda e: e[2] * e[3], reverse=True)
-                                left_eye = left_eyes[0]
+                        for (ex, ey, ew, eh) in eyes:
+                            # Validate eye size and position
+                            if ew * eh > (face_width * face_height * 0.01):  # Minimum size threshold
                                 eye_count += 1
-                                
-                                # Draw rectangle for the left eye
-                                ex, ey, ew, eh = left_eye
-                                cv2.rectangle(left_eye_roi_color, (ex, ey), (ex+ew, ey+eh), (255, 0, 0), 2)
-                                cv2.putText(left_eye_roi_color, "Eye", (ex, ey-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
-                        
-                        if right_eye_roi_gray.size > 0:
-                            right_eye_roi_gray = cv2.equalizeHist(right_eye_roi_gray)
-                            right_eye_roi_gray = clahe.apply(right_eye_roi_gray)
-                            
-                            right_eyes = eye_cascade.detectMultiScale(
-                                right_eye_roi_gray, 
-                                scaleFactor=1.03,
-                                minNeighbors=max(1, eye_sensitivity-2),
-                                minSize=(int(face_width * 0.08), int(face_width * 0.08)),
-                                maxSize=(int(face_width * 0.25), int(face_width * 0.25))
-                            )
-                            
-                            if len(right_eyes) > 0:
-                                # Sort by size and take the largest
-                                right_eyes = sorted(right_eyes, key=lambda e: e[2] * e[3], reverse=True)
-                                right_eye = right_eyes[0]
-                                eye_count += 1
-                                
-                                # Draw rectangle for the right eye
-                                ex, ey, ew, eh = right_eye
-                                cv2.rectangle(right_eye_roi_color, (ex, ey), (ex+ew, ey+eh), (255, 0, 0), 2)
-                                cv2.putText(right_eye_roi_color, "Eye", (ex, ey-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+                                cv2.rectangle(eye_roi_color, (ex, ey), (ex+ew, ey+eh), (255, 0, 0), 2)
+                                cv2.putText(eye_roi_color, "Eye", (ex, ey-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
             
             # Detect smile if enabled
             if detect_smile:
-                # For profile faces, we need to adjust the region of interest
-                # Try multiple regions to improve detection
+                # Adjust region of interest for smile detection
+                lower_face_y1 = y1 + int(face_height * 0.5)  # Start from middle of face
+                lower_face_y2 = y2
                 
-                # Standard region (middle to bottom)
-                lower_face_y1 = y1 + int(face_height * 0.5)
-                lower_face_roi_gray = gray[lower_face_y1:y2, x1:x2]
-                lower_face_roi_color = result_frame[lower_face_y1:y2, x1:x2]
+                # Extract ROI for smile
+                smile_roi_gray = gray[lower_face_y1:lower_face_y2, x1:x2]
+                smile_roi_color = result_frame[lower_face_y1:lower_face_y2, x1:x2]
                 
-                # Alternative region (lower third)
-                alt_lower_face_y1 = y1 + int(face_height * 0.65)
-                alt_lower_face_roi_gray = gray[alt_lower_face_y1:y2, x1:x2]
-                
-                # Apply histogram equalization and enhance contrast
-                smile_detected = False
-                
-                if lower_face_roi_gray.size > 0:
-                    lower_face_roi_gray = cv2.equalizeHist(lower_face_roi_gray)
+                if smile_roi_gray.size > 0:
+                    # Enhance contrast for better detection
+                    smile_roi_gray = cv2.equalizeHist(smile_roi_gray)
                     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-                    lower_face_roi_gray = clahe.apply(lower_face_roi_gray)
+                    smile_roi_gray = clahe.apply(smile_roi_gray)
                     
-                    # Try with standard parameters
+                    # Detect smiles with adjusted parameters
                     smiles = smile_cascade.detectMultiScale(
-                        lower_face_roi_gray, 
-                        scaleFactor=1.2,
-                        minNeighbors=smile_sensitivity,
-                        minSize=(int(face_width * 0.25), int(face_width * 0.15)),
-                        maxSize=(int(face_width * 0.7), int(face_width * 0.4))
+                        smile_roi_gray,
+                        scaleFactor=1.1,
+                        minNeighbors=max(5, smile_sensitivity),
+                        minSize=(int(face_width * 0.3), int(face_width * 0.15)),
+                        maxSize=(int(face_width * 0.6), int(face_width * 0.3))
                     )
                     
+                    # Process detected smiles
                     if len(smiles) > 0:
                         # Sort by size and take the largest
                         smiles = sorted(smiles, key=lambda s: s[2] * s[3], reverse=True)
                         sx, sy, sw, sh = smiles[0]
                         
-                        # Increment smile counter
-                        smile_count += 1
-                        smile_detected = True
-                        
-                        # Draw rectangle for the smile
-                        cv2.rectangle(lower_face_roi_color, (sx, sy), (sx+sw, sy+sh), (0, 0, 255), 2)
-                        cv2.putText(lower_face_roi_color, "Smile", (sx, sy-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-                
-                # If no smile detected in standard region, try alternative region
-                if not smile_detected and alt_lower_face_roi_gray.size > 0:
-                    alt_lower_face_roi_gray = cv2.equalizeHist(alt_lower_face_roi_gray)
-                    alt_lower_face_roi_gray = clahe.apply(alt_lower_face_roi_gray)
-                    
-                    # Try with more sensitive parameters
-                    alt_smiles = smile_cascade.detectMultiScale(
-                        alt_lower_face_roi_gray, 
-                        scaleFactor=1.1,
-                        minNeighbors=max(1, smile_sensitivity-5),  # More sensitive
-                        minSize=(int(face_width * 0.2), int(face_width * 0.1)),
-                        maxSize=(int(face_width * 0.6), int(face_width * 0.3))
-                    )
-                    
-                    if len(alt_smiles) > 0:
-                        # Sort by size and take the largest
-                        alt_smiles = sorted(alt_smiles, key=lambda s: s[2] * s[3], reverse=True)
-                        sx, sy, sw, sh = alt_smiles[0]
-                        
-                        # Adjust coordinates for the alternative region
-                        adjusted_sy = sy + (alt_lower_face_y1 - lower_face_y1)
-                        
-                        # Increment smile counter
-                        smile_count += 1
-                        
-                        # Draw rectangle for the smile (in the original lower face ROI)
-                        cv2.rectangle(lower_face_roi_color, (sx, adjusted_sy), (sx+sw, adjusted_sy+sh), (0, 0, 255), 2)
-                        cv2.putText(lower_face_roi_color, "Smile", (sx, adjusted_sy-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+                        # Validate smile size and position
+                        if sw * sh > (face_width * face_height * 0.05):  # Minimum size threshold
+                            smile_count += 1
+                            cv2.rectangle(smile_roi_color, (sx, sy), (sx+sw, sy+sh), (0, 0, 255), 2)
+                            cv2.putText(smile_roi_color, "Smile", (sx, sy-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
         
         return result_frame, eye_count, smile_count
 
