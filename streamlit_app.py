@@ -451,6 +451,38 @@ def main():
         st.session_state.feature_camera_running = False
         st.session_state.feature_camera_stopped = True
 
+    def init_camera():
+        """Initialize camera and show appropriate messages."""
+        try:
+            # Check if we're running on Hugging Face Spaces
+            if os.environ.get('SPACE_ID'):
+                st.warning("""
+                ⚠️ Video streaming is limited in Hugging Face Spaces:
+                
+                - Live camera access is not available in the hosted environment
+                - This is a security restriction of Hugging Face Spaces
+                - To use camera features, you need to run this app locally on your machine
+                
+                You can still use the image upload option for face detection.
+                """)
+                
+                st.info("To run locally:")
+                st.code("""
+                1. Clone the repository
+                2. Install requirements: pip install -r requirements.txt
+                3. Run: streamlit run streamlit_app.py
+                """)
+                return None
+                
+            cap = cv2.VideoCapture(0)
+            if not cap.isOpened():
+                st.error("Could not access the camera. Make sure it's connected and not being used by another application.")
+                return None
+            return cap
+        except Exception as e:
+            st.error(f"Error initializing camera: {str(e)}")
+            return None
+
     if app_mode == "About":
         st.markdown("""
         ## About This App
@@ -2145,21 +2177,13 @@ def main():
                 if st.session_state.recognition_camera_running:
                     try:
                         st.info("Camera activated. Processing video in real-time...")
-                        cap = cv2.VideoCapture(0)
-                        
-                        if not cap.isOpened():
-                            raise RuntimeError("Could not access the camera. Make sure it's connected and not being used by another application.")
-                        
-                        # Variables for metrics
-                        frame_count = 0
-                        start_time = time.time()
-                        last_frame_time = start_time
-                        fps_history = []
-                        
-                        while st.session_state.recognition_camera_running:
-                            # Process frames here
-                            pass
-                            
+                        cap = init_camera()
+                        if cap is not None:
+                            try:
+                                # Process video frames
+                                pass
+                            finally:
+                                cap.release()
                     except Exception as e:
                         st.error(str(e))
                         st.session_state.recognition_camera_running = False
