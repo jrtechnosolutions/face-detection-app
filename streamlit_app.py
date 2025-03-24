@@ -1620,25 +1620,41 @@ def main():
                 
                 # Preparar datos para la tabla
                 for name, info in st.session_state.face_database.items():
-                    # Determinar el número de embeddings
-                    if 'embeddings' in info:
-                        num_embeddings = len(info['embeddings'])
-                        models = ', '.join(info['models'])
-                    else:
-                        num_embeddings = 1
-                        models = 'VGG-Face'  # Modelo por defecto para formato antiguo
-                    
-                    # Determinar el número de imágenes
-                    num_images = info.get('count', 1)
-                    
-                    # Añadir a los datos
-                    data.append({
-                        "Name": name,
-                        "Images": num_images,
-                        "Embeddings": num_embeddings,
-                        "Models": models,
-                        "Face": info.get('face_image', None)
-                    })
+                    try:
+                        # Determinar el número de embeddings
+                        if 'embeddings' in info:
+                            num_embeddings = len(info['embeddings'])
+                            models = ', '.join(info['models'])
+                        else:
+                            num_embeddings = 1
+                            models = 'VGG-Face'  # Modelo por defecto para formato antiguo
+                        
+                        # Determinar el número de imágenes
+                        num_images = info.get('count', 1)
+                        
+                        # Validar y preparar la imagen facial
+                        face_image = info.get('face_image', None)
+                        if face_image is not None:
+                            if isinstance(face_image, np.ndarray) and face_image.size > 0:
+                                # Asegurar que la imagen sea válida y tenga el formato correcto
+                                if len(face_image.shape) == 2:  # Si es grayscale
+                                    face_image = cv2.cvtColor(face_image, cv2.COLOR_GRAY2BGR)
+                                elif len(face_image.shape) == 3 and face_image.shape[2] == 4:  # Si tiene canal alpha
+                                    face_image = cv2.cvtColor(face_image, cv2.COLOR_BGRA2BGR)
+                            else:
+                                face_image = None
+                        
+                        # Añadir a los datos
+                        data.append({
+                            "Name": name,
+                            "Images": num_images,
+                            "Embeddings": num_embeddings,
+                            "Models": models,
+                            "Face": face_image
+                        })
+                    except Exception as e:
+                        st.error(f"Error processing entry for {name}: {str(e)}")
+                        continue
                 
                 # Debug de los datos procesados
                 st.sidebar.write(f"Processed {len(data)} entries for display")
@@ -1667,22 +1683,46 @@ def main():
                         
                         # Mostrar miniatura si está disponible
                         with col_thumb:
-                            if row["Face"] is not None and row["Face"].size > 0:
+                            if row["Face"] is not None:
                                 try:
-                                    # Redimensionar para crear miniatura
+                                    # Validar la imagen antes de redimensionar
                                     face_img = row["Face"]
-                                    h, w = face_img.shape[:2]
-                                    if h > 0 and w > 0:
-                                        thumbnail = cv2.resize(face_img, (max(1, w//4), max(1, h//4)))
-                                        st.image(cv2.cvtColor(thumbnail, cv2.COLOR_BGR2RGB), width=50)
+                                    if isinstance(face_img, np.ndarray) and face_img.size > 0 and len(face_img.shape) >= 2:
+                                        h, w = face_img.shape[:2]
+                                        if h > 0 and w > 0:
+                                            # Calcular nuevo tamaño manteniendo el aspect ratio
+                                            target_width = 50
+                                            aspect_ratio = float(w) / float(h)
+                                            target_height = int(target_width / aspect_ratio)
+                                            
+                                            # Asegurar dimensiones mínimas
+                                            target_width = max(1, target_width)
+                                            target_height = max(1, target_height)
+                                            
+                                            # Redimensionar usando INTER_AREA para mejor calidad en reducción
+                                            thumbnail = cv2.resize(face_img, 
+                                                                 (target_width, target_height), 
+                                                                 interpolation=cv2.INTER_AREA)
+                                            
+                                            # Convertir a RGB si es necesario
+                                            if len(thumbnail.shape) == 2:  # Si es grayscale
+                                                thumbnail = cv2.cvtColor(thumbnail, cv2.COLOR_GRAY2RGB)
+                                            elif thumbnail.shape[2] == 4:  # Si tiene canal alpha
+                                                thumbnail = cv2.cvtColor(thumbnail, cv2.COLOR_BGRA2RGB)
+                                            else:
+                                                thumbnail = cv2.cvtColor(thumbnail, cv2.COLOR_BGR2RGB)
+                                            
+                                            st.image(thumbnail, width=50)
+                                        else:
+                                            st.write("Invalid dimensions")
                                     else:
-                                        st.write("Invalid image")
+                                        st.write("Invalid image format")
                                 except Exception as e:
                                     st.write("Error displaying image")
                                     st.error(f"Error: {str(e)}")
                             else:
                                 st.write("No image")
-                                
+                        
                         with col1:
                             st.write(row["Name"])
                         with col2:
