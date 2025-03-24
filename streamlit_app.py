@@ -1328,8 +1328,8 @@ def main():
     elif app_mode == "Face Recognition":
         st.title("Face Recognition System")
         st.markdown("""
-        Este módulo permite registrar rostros y reconocerlos posteriormente en tiempo real o en imágenes.
-        Utiliza embeddings faciales para una identificación precisa.
+        This module allows you to register faces and recognize them later in real-time or in images.
+        It uses facial embeddings for accurate identification.
         """)
         
         # Verificar si DeepFace está disponible
@@ -1359,29 +1359,21 @@ def main():
         with tab1:
             st.header("Register New Face")
             
-            # Añadir el file_uploader para la imagen
+            # Add file uploader for image
             uploaded_file = st.file_uploader("Upload an image", type=['jpg', 'jpeg', 'png'], key="register_face_image")
             
-            # Limpiar el nombre cuando se carga una imagen nueva
-            if uploaded_file and 'last_uploaded_file' in st.session_state and st.session_state.last_uploaded_file != uploaded_file.name:
-                st.session_state.person_name = ""
-            
-            if uploaded_file:
-                # Guardar el nombre del archivo actual para comparar en la próxima carga
-                st.session_state.last_uploaded_file = uploaded_file.name
-            
-            # Formulario de registro
+            # Registration form
             with st.form("face_registration_form"):
                 person_name = st.text_input("Person's name", key="person_name")
                 
-                # Selector de modelo
+                # Model selector
                 model_choice = st.selectbox(
                     "Embedding model",
                     ["VGG-Face", "Facenet", "OpenFace", "ArcFace"],
                     index=0
                 )
                 
-                # Ajuste de umbral de confianza
+                # Confidence threshold adjustment
                 confidence_threshold = st.slider(
                     "Detection Confidence",
                     min_value=0.0,
@@ -1390,16 +1382,16 @@ def main():
                     step=0.01
                 )
                 
-                # Opción para añadir a persona existente
+                # Option to add to existing person
                 add_to_existing = st.checkbox(
                     "Add to existing person"
                 )
                 
-                # Botón de registro
+                # Register button
                 register_button = st.form_submit_button("Register Face")
             
             if register_button:
-                # Validar que se haya proporcionado un nombre
+                # Validate name provided
                 if not person_name:
                     st.error("Person's name is required. Please enter a name.")
                 elif uploaded_file is None:
@@ -1815,10 +1807,10 @@ def main():
                 st.warning("No faces registered. Please register at least one face first.")
             else:
                 # Subir imagen para reconocimiento
-                uploaded_file = st.file_uploader("Subir imagen para reconocimiento", type=['jpg', 'jpeg', 'png'], key="recognition_image")
+                uploaded_file = st.file_uploader("Upload image for recognition", type=['jpg', 'jpeg', 'png'], key="recognition_image")
                 
                 # Configuración avanzada
-                with st.expander("Configuración avanzada", expanded=False):
+                with st.expander("Advanced Settings", expanded=False):
                     # Configuración de umbral de similitud
                     similarity_threshold = st.slider(
                         "Similarity threshold (%)", 
@@ -1826,7 +1818,7 @@ def main():
                         max_value=95.0, 
                         value=45.0, 
                         step=5.0,
-                        help="Porcentaje mínimo de similitud para considerar una coincidencia"
+                        help="Minimum percentage of similarity to consider a match"
                     )
                     
                     confidence_threshold = st.slider(
@@ -2100,31 +2092,31 @@ def main():
                     )
                     
                     voting_method = st.radio(
-                        "Método de votación para múltiples embeddings",
-                        ["Promedio", "Mejor coincidencia", "Votación ponderada"],
+                        "Voting method for multiple embeddings",
+                        ["Average", "Best match", "Weighted voting"],
                         key="realtime_voting",
-                        help="Cómo combinar resultados cuando hay múltiples imágenes de una persona"
+                        help="How to combine results when there are multiple images of a person"
                     )
                     
                     show_confidence = st.checkbox(
-                        "Mostrar porcentaje de confianza", 
+                        "Show confidence percentage", 
                         value=True,
-                        help="Mostrar el porcentaje de similitud junto al nombre"
+                        help="Show similarity percentage next to the name"
                     )
                     
                     stabilize_results = st.checkbox(
-                        "Estabilizar resultados", 
+                        "Stabilize results", 
                         value=True,
-                        help="Reduce fluctuaciones en la identificación usando un promedio temporal"
+                        help="Reduce identification fluctuations using temporal averaging"
                     )
                     
                     fps_limit = st.slider(
-                        "Límite de FPS", 
+                        "FPS Limit", 
                         min_value=5, 
                         max_value=30, 
                         value=15, 
                         step=1,
-                        help="Limitar los frames por segundo para reducir uso de CPU"
+                        help="Limit frames per second to reduce CPU usage"
                     )
                 
                 # Inicializar estado de la cámara
