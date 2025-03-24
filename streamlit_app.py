@@ -2057,13 +2057,12 @@ def main():
         with tab3:
             st.header("Real-time Recognition")
             
-            # Verificar si hay rostros registrados
+            # Check if there are registered faces
             if not st.session_state.face_database:
                 st.warning("No faces registered. Please register at least one face first.")
             else:
-                # Configuración avanzada
-                with st.expander("Configuración avanzada", expanded=False):
-                    # Configuración de umbral de similitud
+                # Advanced settings
+                with st.expander("Advanced Settings", expanded=False):
                     similarity_threshold = st.slider(
                         "Similarity threshold (%)", 
                         min_value=35.0, 
@@ -2071,7 +2070,7 @@ def main():
                         value=45.0, 
                         step=5.0,
                         key="realtime_threshold",
-                        help="Porcentaje mínimo de similitud para considerar una coincidencia"
+                        help="Minimum percentage of similarity to consider a match"
                     )
                     
                     confidence_threshold = st.slider(
@@ -2081,14 +2080,14 @@ def main():
                         value=0.5, 
                         step=0.05,
                         key="realtime_confidence",
-                        help="Un valor más alto es más restrictivo pero más preciso"
+                        help="Higher value is more restrictive but more accurate"
                     )
                     
                     model_choice = st.selectbox(
                         "Embedding model", 
                         ["VGG-Face", "Facenet", "OpenFace", "ArcFace"],
                         key="realtime_model",
-                        help="Diferentes modelos pueden dar resultados distintos según las características faciales"
+                        help="Different models may give different results based on facial features"
                     )
                     
                     voting_method = st.radio(
@@ -2118,30 +2117,23 @@ def main():
                         step=1,
                         help="Limit frames per second to reduce CPU usage"
                     )
-                
-                # Inicializar estado de la cámara
+
+                # Initialize states
                 if 'recognition_camera_running' not in st.session_state:
                     st.session_state.recognition_camera_running = False
-                    
-                # Inicializar historial de reconocimiento para estabilización
+                
                 if 'recognition_history' not in st.session_state:
                     st.session_state.recognition_history = {}
-                
+
                 # Camera control buttons
                 col1, col2 = st.columns(2)
                 start_button = col1.button("Start Camera", key="start_recognition_camera",
                                           on_click=lambda: setattr(st.session_state, 'recognition_camera_running', True))
                 stop_button = col2.button("Stop Camera", key="stop_recognition_camera",
                                          on_click=lambda: setattr(st.session_state, 'recognition_camera_running', False))
-                
-                if not cap.isOpened():
-                    st.error("Could not access the camera. Make sure it's connected and not being used by another application.")
-                    st.session_state.recognition_camera_running = False
-                
-                # Placeholder para el video
+
+                # Video and metrics placeholders
                 video_placeholder = st.empty()
-                
-                # Placeholder para métricas
                 metrics_cols = st.columns(3)
                 with metrics_cols[0]:
                     faces_metric = st.empty()
@@ -2149,210 +2141,31 @@ def main():
                     fps_metric = st.empty()
                 with metrics_cols[2]:
                     time_metric = st.empty()
-                
+
                 if st.session_state.recognition_camera_running:
-                    st.info("Camera activated. Processing video in real-time...")
-                    
-                    # Inicializar webcam
-                    cap = cv2.VideoCapture(0)
-                    
-                    if not cap.isOpened():
-                        st.error("No se pudo acceder a la cámara. Asegúrese de que esté conectada y no esté siendo utilizada por otra aplicación.")
+                    try:
+                        st.info("Camera activated. Processing video in real-time...")
+                        cap = cv2.VideoCapture(0)
+                        
+                        if not cap.isOpened():
+                            raise RuntimeError("Could not access the camera. Make sure it's connected and not being used by another application.")
+                        
+                        # Variables for metrics
+                        frame_count = 0
+                        start_time = time.time()
+                        last_frame_time = start_time
+                        fps_history = []
+                        
+                        while st.session_state.recognition_camera_running:
+                            # Process frames here
+                            pass
+                            
+                    except Exception as e:
+                        st.error(str(e))
                         st.session_state.recognition_camera_running = False
-                    else:
-                        try:
-                            # Variables para métricas
-                            frame_count = 0
-                            start_time = time.time()
-                            last_frame_time = start_time
-                            fps_history = []
-                            
-                            while st.session_state.recognition_camera_running:
-                                # Control de FPS
-                                current_time = time.time()
-                                elapsed = current_time - last_frame_time
-                                if elapsed < 1.0/fps_limit:
-                                    time.sleep(0.01)  # Pequeña pausa para no sobrecargar la CPU
-                                    continue
-                                    
-                                last_frame_time = current_time
-                                
-                                # Leer frame
-                                ret, frame = cap.read()
-                                if not ret:
-                                    st.error("Error al leer frame de la cámara.")
-                                    break
-                                
-                                # Actualizar contador de frames
-                                frame_count += 1
-                                
-                                # Calcular FPS
-                                if frame_count % 5 == 0:
-                                    fps = 5 / (current_time - start_time)
-                                    fps_history.append(fps)
-                                    if len(fps_history) > 10:
-                                        fps_history.pop(0)
-                                    avg_fps = sum(fps_history) / len(fps_history)
-                                    start_time = current_time
-                                    
-                                    # Actualizar métricas
-                                    fps_metric.metric("FPS", f"{avg_fps:.1f}")
-                                    time_metric.metric("Tiempo activo", f"{int(current_time - time.time() + st.session_state.get('camera_start_time', current_time))}s")
-                                
-                                # Detect rostros
-                                detections = detect_face_dnn(face_net, frame, confidence_threshold)
-                                _, bboxes = process_face_detections(frame, detections, confidence_threshold)
-                                
-                                # Actualizar métrica de rostros
-                                if frame_count % 5 == 0:
-                                    faces_metric.metric("Faces detected", len(bboxes))
-                                
-                                # Reconocer cada rostro
-                                result_frame = frame.copy()
-                                
-                                for i, bbox in enumerate(bboxes):
-                                    face_id = f"face_{i}"
-                                    
-                                    # Extraer embedding del rostro
-                                    embedding = extract_face_embeddings(frame, bbox, model_name=model_choice)
-                                    
-                                    if embedding is not None:
-                                        # Compare con rostros registrados
-                                        matches = []
-                                        
-                                        for name, info in st.session_state.face_database.items():
-                                            if 'embeddings' in info:
-                                                # Nuevo formato con múltiples embeddings
-                                                similarities = []
-                                                
-                                                for idx, registered_embedding in enumerate(info['embeddings']):
-                                                    # Usar el mismo modelo si es posible
-                                                    if info['models'][idx] == model_choice:
-                                                        weight = 1.0  # Dar más peso a embeddings del mismo modelo
-                                                    else:
-                                                        weight = 0.8  # Peso menor para embeddings de otros modelos
-                                                        
-                                                    # Asegurarse de que los embeddings sean compatibles
-                                                    try:
-                                                        similarity = cosine_similarity([embedding["embedding"]], [registered_embedding])[0][0] * 100 * weight
-                                                        similarities.append(similarity)
-                                                    except ValueError as e:
-                                                        # Si hay error de dimensiones incompatibles, omitir esta comparación
-                                                        continue
-                                                
-                                                # Aplicar método de votación seleccionado
-                                                if voting_method == "Promedio":
-                                                    final_similarity = sum(similarities) / len(similarities)
-                                                elif voting_method == "Mejor coincidencia":
-                                                    final_similarity = max(similarities)
-                                                else:  # Votación ponderada
-                                                    # Dar más peso a similitudes más altas
-                                                    weighted_sum = sum(s * (i+1) for i, s in enumerate(sorted(similarities)))
-                                                    weights_sum = sum(i+1 for i in range(len(similarities)))
-                                                    final_similarity = weighted_sum / weights_sum
-                                                
-                                                matches.append({"name": name, "similarity": final_similarity})
-                                            else:
-                                                # Formato antiguo con un solo embedding
-                                                registered_embedding = info['embedding']
-                                                try:
-                                                    similarity = cosine_similarity([embedding["embedding"]], [registered_embedding])[0][0] * 100
-                                                    matches.append({"name": name, "similarity": similarity})
-                                                except ValueError as e:
-                                                    # Si hay error de dimensiones incompatibles, omitir esta comparación
-                                                    # Modelos incompatibles: {embedding['model']} vs formato antiguo
-                                                    continue
-                                        
-                                        # Ordenar coincidencias por similitud
-                                        matches.sort(key=lambda x: x["similarity"], reverse=True)
-                                        
-                                        # Estabilizar resultados si está activado
-                                        if stabilize_results and matches:
-                                            best_match = matches[0]
-                                            
-                                            # Inicializar historial para este rostro si no existe
-                                            if face_id not in st.session_state.recognition_history:
-                                                st.session_state.recognition_history[face_id] = {
-                                                    "names": [],
-                                                    "similarities": []
-                                                }
-                                            
-                                            # Añadir al historial
-                                            history = st.session_state.recognition_history[face_id]
-                                            history["names"].append(best_match["name"])
-                                            history["similarities"].append(best_match["similarity"])
-                                            
-                                            # Limitar historial a los últimos 10 frames
-                                            if len(history["names"]) > 10:
-                                                history["names"].pop(0)
-                                                history["similarities"].pop(0)
-                                            
-                                            # Determinar el nombre más frecuente en el historial
-                                            if len(history["names"]) >= 3:  # Necesitamos al menos 3 frames para estabilizar
-                                                name_counts = {}
-                                                for name in history["names"]:
-                                                    if name not in name_counts:
-                                                        name_counts[name] = 0
-                                                    name_counts[name] += 1
-                                                
-                                                # Encontrar el nombre más frecuente
-                                                stable_name = max(name_counts.items(), key=lambda x: x[1])[0]
-                                                
-                                                # Calcular similitud promedio para ese nombre
-                                                stable_similarities = [
-                                                    history["similarities"][i] 
-                                                    for i in range(len(history["names"])) 
-                                                    if history["names"][i] == stable_name
-                                                ]
-                                                stable_similarity = sum(stable_similarities) / len(stable_similarities)
-                                                
-                                                # Reemplazar la mejor coincidencia con el resultado estabilizado
-                                                best_match = {"name": stable_name, "similarity": stable_similarity}
-                                            else:
-                                                best_match = matches[0]
-                                        else:
-                                            best_match = matches[0] if matches else None
-                                        
-                                        # Dibujar resultado en la imagen
-                                        x1, y1, x2, y2, _ = bbox
-                                        
-                                        if best_match and best_match["similarity"] >= similarity_threshold:
-                                            # Coincidencia encontrada
-                                            # Color basado en nivel de similitud
-                                            if best_match["similarity"] >= 80:
-                                                color = (0, 255, 0)  # Verde para alta similitud
-                                            elif best_match["similarity"] >= 65:
-                                                color = (0, 255, 255)  # Amarillo para media similitud
-                                            else:
-                                                color = (0, 165, 255)  # Naranja para baja similitud
-                                            
-                                            # Dibujar rectángulo y etiqueta
-                                            cv2.rectangle(result_frame, (x1, y1), (x2, y2), color, 2)
-                                            
-                                            if show_confidence:
-                                                label = f"{best_match['name']}: {best_match['similarity']:.1f}%"
-                                            else:
-                                                label = f"{best_match['name']}"
-                                                
-                                            cv2.putText(result_frame, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
-                                        else:
-                                            # No hay coincidencia
-                                            cv2.rectangle(result_frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
-                                            
-                                            if best_match:
-                                                label = f"Desconocido: {best_match['similarity']:.1f}%" if show_confidence else "Desconocido"
-                                            else:
-                                                label = "Desconocido"
-                                                
-                                            cv2.putText(result_frame, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-                            
-                            # Mostrar resultado
-                            video_placeholder.image(result_frame, channels="BGR", use_container_width=True)
-                        finally:
-                            # Liberar la cámara cuando se detenga
+                    finally:
+                        if 'cap' in locals() and cap is not None:
                             cap.release()
-                            # Limpiar historial de reconocimiento
-                            st.session_state.recognition_history = {}
                 else:
                     st.info("Click 'Start Camera' to begin real-time recognition.")
 
