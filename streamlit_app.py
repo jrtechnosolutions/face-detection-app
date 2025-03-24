@@ -1430,7 +1430,24 @@ def main():
                                 if embeddings_all_models:
                                     # Guardar la imagen del rostro para referencia
                                     x1, y1, x2, y2, _ = bboxes[0]
-                                    face_crop = image[y1:y2, x1:x2].copy()
+                                    # Validar coordenadas
+                                    x1, y1 = max(0, x1), max(0, y1)
+                                    x2, y2 = min(image.shape[1], x2), min(image.shape[0], y2)
+                                    
+                                    if x2 > x1 and y2 > y1:
+                                        face_crop = image[y1:y2, x1:x2].copy()
+                                        # Asegurar un tamaño mínimo para el rostro
+                                        if face_crop.size > 0:
+                                            min_size = 64
+                                            face_h, face_w = face_crop.shape[:2]
+                                            if face_h < min_size or face_w < min_size:
+                                                scale = max(min_size/face_h, min_size/face_w)
+                                                face_crop = cv2.resize(face_crop, 
+                                                                     (max(min_size, int(face_w * scale)), 
+                                                                      max(min_size, int(face_h * scale))))
+                                    else:
+                                        st.error("Invalid face region detected. Please try again with a clearer image.")
+                                        return
                                     
                                     # Guardar en la base de datos
                                     if add_to_existing and person_name in st.session_state.face_database:
@@ -1505,55 +1522,72 @@ def main():
                             if embeddings_all_models:
                                 # Extraer la región del rostro para guardarla
                                 x1, y1, x2, y2, _ = bboxes[0]
-                                face_crop = image[y1:y2, x1:x2].copy()
+                                # Validar coordenadas
+                                x1, y1 = max(0, x1), max(0, y1)
+                                x2, y2 = min(image.shape[1], x2), min(image.shape[0], y2)
                                 
-                                # Guardar en la base de datos
-                                if add_to_existing and person_name in st.session_state.face_database:
-                                    # Añadir a persona existente
-                                    if 'embeddings' in st.session_state.face_database[person_name]:
-                                        # Formato nuevo con múltiples embeddings
-                                        for embedding in embeddings_all_models:
-                                            model_name = embedding['model']
-                                            model_idx = -1
+                                if x2 > x1 and y2 > y1:
+                                    face_crop = image[y1:y2, x1:x2].copy()
+                                    # Asegurar un tamaño mínimo para el rostro
+                                    if face_crop.size > 0:
+                                        min_size = 64
+                                        face_h, face_w = face_crop.shape[:2]
+                                        if face_h < min_size or face_w < min_size:
+                                            scale = max(min_size/face_h, min_size/face_w)
+                                            face_crop = cv2.resize(face_crop, 
+                                                                 (max(min_size, int(face_w * scale)), 
+                                                                  max(min_size, int(face_h * scale))))
+                                    else:
+                                        st.error("Invalid face region detected. Please try again with a clearer image.")
+                                        return
+                                    
+                                    # Guardar en la base de datos
+                                    if add_to_existing and person_name in st.session_state.face_database:
+                                        # Añadir a persona existente
+                                        if 'embeddings' in st.session_state.face_database[person_name]:
+                                            # Formato nuevo con múltiples embeddings
+                                            for embedding in embeddings_all_models:
+                                                model_name = embedding['model']
+                                                model_idx = -1
+                                                
+                                                # Buscar si ya existe un embedding de este modelo
+                                                for i, model in enumerate(st.session_state.face_database[person_name]['models']):
+                                                    if model == model_name:
+                                                        model_idx = i
+                                                        break
+                                                
+                                                if model_idx >= 0:
+                                                    # Actualizar embedding existente
+                                                    st.session_state.face_database[person_name]['embeddings'][model_idx] = embedding['embedding']
+                                                else:
+                                                    # Añadir nuevo modelo
+                                                    st.session_state.face_database[person_name]['models'].append(model_name)
+                                                    st.session_state.face_database[person_name]['embeddings'].append(embedding['embedding'])
                                             
-                                            # Buscar si ya existe un embedding de este modelo
-                                            for i, model in enumerate(st.session_state.face_database[person_name]['models']):
-                                                if model == model_name:
-                                                    model_idx = i
-                                                    break
-                                            
-                                            if model_idx >= 0:
-                                                # Actualizar embedding existente
-                                                st.session_state.face_database[person_name]['embeddings'][model_idx] = embedding['embedding']
-                                            else:
-                                                # Añadir nuevo modelo
-                                                st.session_state.face_database[person_name]['models'].append(model_name)
-                                                st.session_state.face_database[person_name]['embeddings'].append(embedding['embedding'])
-                                        
-                                        # Actualizar imagen de referencia
-                                        st.session_state.face_database[person_name]['face_image'] = face_crop
+                                            # Actualizar imagen de referencia
+                                            st.session_state.face_database[person_name]['face_image'] = face_crop
                                         
                                         # Incrementar contador
                                         st.session_state.face_database[person_name]['count'] += 1
-                                else:
-                                    # Crear nueva entrada en la base de datos
-                                    st.sidebar.write(f"Creating new entry for {person_name}")
+                                    else:
+                                        # Crear nueva entrada en la base de datos
+                                        st.sidebar.write(f"Creating new entry for {person_name}")
+                                        
+                                        models = []
+                                        embeddings = []
+                                        
+                                        for embedding in embeddings_all_models:
+                                            models.append(embedding['model'])
+                                            embeddings.append(embedding['embedding'])
+                                        
+                                        st.session_state.face_database[person_name] = {
+                                            'embeddings': embeddings,
+                                            'models': models,
+                                            'count': 1,
+                                            'face_image': face_crop
+                                        }
                                     
-                                    models = []
-                                    embeddings = []
-                                    
-                                    for embedding in embeddings_all_models:
-                                        models.append(embedding['model'])
-                                        embeddings.append(embedding['embedding'])
-                                    
-                                    st.session_state.face_database[person_name] = {
-                                        'embeddings': embeddings,
-                                        'models': models,
-                                        'count': 1,
-                                        'face_image': face_crop
-                                    }
-                                
-                                st.success(f"Face registered successfully for {person_name}!")
+                                    st.success(f"Face registered successfully for {person_name}!")
                                 
                                 # Guardar la base de datos actualizada
                                 if DATABASE_UTILS_AVAILABLE:
@@ -1633,12 +1667,19 @@ def main():
                         
                         # Mostrar miniatura si está disponible
                         with col_thumb:
-                            if row["Face"] is not None:
-                                # Redimensionar para crear miniatura
-                                face_img = row["Face"]
-                                h, w = face_img.shape[:2]
-                                thumbnail = cv2.resize(face_img, (w//4, h//4))
-                                st.image(cv2.cvtColor(thumbnail, cv2.COLOR_BGR2RGB), width=50)
+                            if row["Face"] is not None and row["Face"].size > 0:
+                                try:
+                                    # Redimensionar para crear miniatura
+                                    face_img = row["Face"]
+                                    h, w = face_img.shape[:2]
+                                    if h > 0 and w > 0:
+                                        thumbnail = cv2.resize(face_img, (max(1, w//4), max(1, h//4)))
+                                        st.image(cv2.cvtColor(thumbnail, cv2.COLOR_BGR2RGB), width=50)
+                                    else:
+                                        st.write("Invalid image")
+                                except Exception as e:
+                                    st.write("Error displaying image")
+                                    st.error(f"Error: {str(e)}")
                             else:
                                 st.write("No image")
                                 
