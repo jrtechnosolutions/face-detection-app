@@ -4,7 +4,7 @@ Main application entry point for the Face Detection & Recognition App.
 This module initializes the application, checks for required model files, 
 and launches the main Streamlit interface.
 
-Author: CVJR01
+Author: JAVIER RONDON
 Version: 1.0.0
 License: MIT
 """
