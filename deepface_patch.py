@@ -1,5 +1,11 @@
 """
-Módulo para parchear DeepFace y RetinaFace para compatibilidad con diferentes versiones de TensorFlow
+DeepFace and RetinaFace Compatibility Patch Module
+
+This module provides patches to ensure compatibility between DeepFace, RetinaFace,
+and different versions of TensorFlow and Keras.
+
+It addresses issues that arise from TensorFlow's changing Keras integration
+across different versions by dynamically patching the necessary modules at runtime.
 """
 import os
 import sys
@@ -7,27 +13,36 @@ import importlib
 import warnings
 
 def patch_retina_face():
-    """Parchea RetinaFace para funcionar con Keras independiente o integrado en TensorFlow"""
+    """
+    Patch RetinaFace library to work with standalone Keras or TensorFlow-integrated Keras.
+    
+    This function detects the current TensorFlow version and modifies RetinaFace's
+    internal references to use the appropriate Keras implementation:
+    - For TF 2.15.x: Uses standard standalone Keras
+    - For TF 2.19.x: Uses tf-keras package
+    
+    The patches are applied using monkey patching to avoid modifying source files.
+    """
     try:
-        # Verificar si podemos importar retina_face
+        # Check if RetinaFace is available
         import retina_face
         
-        # Verificar la versión de TensorFlow
+        # Check TensorFlow version
         import tensorflow as tf
         tf_version = tf.__version__
         
-        # Para TF 2.15.x, usamos keras estándar
+        # For TF 2.15.x, use standard keras
         if tf_version.startswith('2.15'):
             try:
                 import keras
                 print(f"Using standard Keras {keras.__version__} with TensorFlow {tf_version}")
                 
-                # Monkeypatch para RetinaFace si es necesario
+                # Monkey patch RetinaFace if necessary
                 try:
-                    # Intentar importar el módulo que podría usar keras
+                    # Try to import the module that might use keras
                     from retina_face.commons import postprocess
                     if not hasattr(postprocess, '_keras_patched'):
-                        # Verificar si está usando tf.keras
+                        # Check if it's using tf.keras
                         if hasattr(postprocess, 'keras') and postprocess.keras.__name__ == 'tensorflow.keras':
                             print("Patching RetinaFace to use standard keras instead of tf.keras")
                             postprocess.keras = keras
@@ -37,13 +52,13 @@ def patch_retina_face():
             except ImportError:
                 print("Standard Keras not found, using tf.keras")
         
-        # Para TF 2.19.x, necesitamos tf-keras
+        # For TF 2.19.x, we need tf-keras
         elif tf_version.startswith('2.19'):
             try:
                 import tf_keras
                 print(f"Using tf-keras with TensorFlow {tf_version}")
                 
-                # Monkeypatch para RetinaFace si es necesario
+                # Monkey patch RetinaFace if necessary
                 try:
                     from retina_face.commons import postprocess
                     if not hasattr(postprocess, '_keras_patched'):
@@ -60,7 +75,16 @@ def patch_retina_face():
         print(f"Warning: Could not patch RetinaFace: {e}")
 
 def patch_deepface():
-    """Parchea DeepFace para funcionar con diferentes versiones de TensorFlow"""
+    """
+    Patch DeepFace library to work with different TensorFlow versions.
+    
+    This function identifies and patches key DeepFace modules that depend on
+    Keras, ensuring they use the appropriate Keras implementation for the
+    current TensorFlow version.
+    
+    Particularly important for TensorFlow 2.19+, where Keras is no longer
+    bundled with TensorFlow.
+    """
     try:
         import deepface
         import tensorflow as tf
@@ -69,7 +93,7 @@ def patch_deepface():
         if tf_version.startswith('2.19'):
             try:
                 import tf_keras
-                # Intentar parchear los módulos relevantes de DeepFace
+                # Try to patch relevant DeepFace modules
                 deepface_modules = [
                     'deepface.commons.functions',
                     'deepface.detectors.RetinaFaceWrapper',
@@ -90,8 +114,14 @@ def patch_deepface():
         print(f"Warning: Could not patch DeepFace: {e}")
 
 def apply_patches():
-    """Aplica todos los parches necesarios"""
-    warnings.filterwarnings('ignore')  # Reducir mensajes de advertencia
+    """
+    Apply all necessary compatibility patches.
+    
+    This function serves as the main entry point to apply all patches
+    for ensuring compatibility between face detection libraries and
+    the current TensorFlow/Keras environment.
+    """
+    warnings.filterwarnings('ignore')  # Reduce warning messages
     patch_retina_face()
     patch_deepface()
     print("Patches applied successfully")

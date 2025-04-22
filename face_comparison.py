@@ -1,3 +1,14 @@
+"""
+Face Comparison Module
+
+This module provides functions for comparing faces between images using both
+traditional computer vision techniques (HOG) and deep learning models (DeepFace).
+It includes functions for generating similarity metrics, visual comparison
+reports, and extracting facial embeddings.
+
+The module supports fallback mechanisms to ensure robust face comparison
+even when certain models or libraries are unavailable.
+"""
 import cv2
 import numpy as np
 import streamlit as st
@@ -5,7 +16,19 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 def compare_faces(image1, bboxes1, image2, bboxes2):
     """
-    Compare faces using HOG features
+    Compare faces using Histogram of Oriented Gradients (HOG) features.
+    
+    This method provides a baseline comparison using traditional computer
+    vision techniques without requiring deep learning models.
+    
+    Args:
+        image1 (numpy.ndarray): First image containing faces
+        bboxes1 (list): List of bounding boxes for faces in the first image
+        image2 (numpy.ndarray): Second image containing faces
+        bboxes2 (list): List of bounding boxes for faces in the second image
+        
+    Returns:
+        list: Nested list of comparison results with similarity scores
     """
     # Convert images to grayscale
     gray1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
@@ -77,7 +100,20 @@ def compare_faces(image1, bboxes1, image2, bboxes2):
 
 def compare_faces_embeddings(image1, bboxes1, image2, bboxes2, model_name="VGG-Face"):
     """
-    Compare faces using facial embeddings from DeepFace
+    Compare faces using neural network facial embeddings from DeepFace.
+    
+    This provides a more advanced face comparison than HOG features by using
+    deep learning models specifically trained for facial recognition.
+    
+    Args:
+        image1 (numpy.ndarray): First image containing faces
+        bboxes1 (list): List of bounding boxes for faces in the first image
+        image2 (numpy.ndarray): Second image containing faces
+        bboxes2 (list): List of bounding boxes for faces in the second image
+        model_name (str): Name of the DeepFace model to use (default: "VGG-Face")
+        
+    Returns:
+        list: Nested list of comparison results with similarity scores
     """
     try:
         from deepface import DeepFace
@@ -159,7 +195,19 @@ def compare_faces_embeddings(image1, bboxes1, image2, bboxes2, model_name="VGG-F
 
 def generate_comparison_report_english(comparison_results, bboxes1, bboxes2, threshold=50.0):
     """
-    Generate a text report of the face comparison results
+    Generate a formatted text report of face comparison results.
+    
+    Creates a human-readable report detailing the similarity scores between
+    faces in two images, highlighting the best matches.
+    
+    Args:
+        comparison_results (list): Results from compare_faces or compare_faces_embeddings
+        bboxes1 (list): List of bounding boxes for faces in the first image
+        bboxes2 (list): List of bounding boxes for faces in the second image
+        threshold (float): Minimum similarity score to consider a match (default: 50.0)
+        
+    Returns:
+        str: Formatted report text with comparison details
     """
     # Skip if no comparison results
     if not comparison_results:
@@ -197,7 +245,21 @@ def generate_comparison_report_english(comparison_results, bboxes1, bboxes2, thr
 
 def draw_face_matches(image1, bboxes1, image2, bboxes2, comparison_results, threshold=50.0):
     """
-    Create a combined image showing the two input images side by side with lines connecting matching faces
+    Create a visual representation of face matches between two images.
+    
+    Generates a combined image with both input images side by side and
+    draws connecting lines between matching faces, with similarity scores.
+    
+    Args:
+        image1 (numpy.ndarray): First image containing faces
+        bboxes1 (list): List of bounding boxes for faces in the first image
+        image2 (numpy.ndarray): Second image containing faces
+        bboxes2 (list): List of bounding boxes for faces in the second image
+        comparison_results (list): Results from compare_faces or compare_faces_embeddings
+        threshold (float): Minimum similarity score to draw a match line (default: 50.0)
+        
+    Returns:
+        numpy.ndarray: Combined image with visual match indicators
     """
     # Get dimensions
     h1, w1 = image1.shape[:2]
@@ -252,7 +314,18 @@ def draw_face_matches(image1, bboxes1, image2, bboxes2, comparison_results, thre
 
 def extract_face_embeddings(image, bbox, model_name="VGG-Face"):
     """
-    Extract facial embeddings from a face using DeepFace
+    Extract facial embedding vector for a single face using DeepFace.
+    
+    These embeddings can be used for face recognition and comparison.
+    
+    Args:
+        image (numpy.ndarray): Image containing the face
+        bbox (list): Bounding box coordinates [x1, y1, x2, y2, confidence]
+        model_name (str): Name of the DeepFace model to use (default: "VGG-Face")
+        
+    Returns:
+        dict: Dictionary containing embedding vector and model information,
+              or None if embedding extraction fails
     """
     try:
         from deepface import DeepFace
@@ -293,7 +366,18 @@ def extract_face_embeddings(image, bbox, model_name="VGG-Face"):
 
 def extract_face_embeddings_all_models(image, bbox):
     """
-    Extract facial embeddings using multiple models (VGG-Face, Facenet, OpenFace, ArcFace)
+    Extract facial embeddings using multiple models for enhanced recognition.
+    
+    Uses several different deep learning models to extract embeddings,
+    providing more robust recognition capabilities.
+    
+    Args:
+        image (numpy.ndarray): Image containing the face
+        bbox (list): Bounding box coordinates [x1, y1, x2, y2, confidence]
+        
+    Returns:
+        list: List of embedding dictionaries from different models,
+              or None if all embedding extractions fail
     """
     models = ["VGG-Face", "Facenet", "OpenFace", "ArcFace"]
     embeddings = []
